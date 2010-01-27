@@ -3,48 +3,61 @@ module Reno
 	end
 	
 	Packages = {}
+	
+	class PackageOption < Option
+		def name(name)
+			@package.name = name
+		end
+		
+		def desc(desc)
+			@package.desc = desc
+		end
+		
+		def version(version)
+			@package.version = version
+		end
+		
+		def compiler(hash)
+			# Verify that all languages exist
+			hash.each_key { |key| Languages.locate(key) }
+			
+			@package.compilers.merge!(hash)
+		end
+	end
 
 	class Package
-		attr_reader :name, :version, :toolchain
+		attr_reader :default, :name, :compilers
 		attr :desc, true
 		attr :version, true
 
-		def initialize(name, version = nil, &block)
-			@name = name.to_s
-			@version = version
-			@options = block
+		def initialize(&block)
+			@default = {}
+			@compilers = {}
 			
-			raise PackageError, "The package #{@name} already exist." if Packages[@name]
-			Packages[@name] = self
-	
+			# This should be the last thing to be set up. The object might depend on the other variables.
+			@option = PackageOption.new(self, nil, block)
+
 			self
 		end
 		
+		def name=(name)
+			raise "You have already assigned this package a name" if @name
+			
+			@name = name.to_s
+
+			raise PackageError, "The package #{@name} already exist." if Packages[@name]
+			Packages[@name] = self
+		end
+		
+		def to_config(data)
+			conf = ConfigurationNode.new(@option.package, nil, nil, nil)
+			@option.apply_config(conf, data)
+			conf
+		end
+
 		def load_config(data)
 			conf = PackageConf.new(self)
 			Options.new(conf, data, @options)
-		end
-	end
-	
-	class PackageConf
-		def initialize(desc)
-			@desc = desc
-			@files = []
-			@langs = {}
-		end
-		
-		def file(name)
-			@files.concat FileList[name]
-		end
-		
-		def language(name)
-			lang = @langs[name]
-			unless lang
-				raise PackageError, "Unable to find language #{name}." unless Languages.const_defined? name
-				lang = Languages.const_get(name).new(self)
-				@langs[name] = lang
-			end
-			lang
 		end
 	end
 

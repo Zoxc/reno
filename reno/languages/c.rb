@@ -3,6 +3,10 @@ module Reno
 		class C < Language
 			attr_reader :defines
 			
+			def self.extensions
+				['c']
+			end
+			
 			def initialize(*args)
 				@defines = {}
 				super
