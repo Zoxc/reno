@@ -9,6 +9,9 @@ module Reno
 	end
 
 	require 'reno/configuration'
+	require 'reno/builder'
+	require 'reno/cache'
+	require 'reno/sourcefile'
 	require 'reno/options'
 	require 'reno/languages'
 	require 'reno/package'

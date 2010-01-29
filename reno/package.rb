@@ -26,14 +26,14 @@ module Reno
 	end
 
 	class Package
-		attr_reader :default, :name, :compilers
+		attr_reader :default, :name, :compilers, :base
 		attr :desc, true
 		attr :version, true
 
 		def initialize(&block)
 			@default = {}
 			@compilers = {}
-			
+			@base = Dir.getwd
 			# This should be the last thing to be set up. The object might depend on the other variables.
 			@option = PackageOption.new(self, nil, block)
 
@@ -49,10 +49,12 @@ module Reno
 			Packages[@name] = self
 		end
 		
-		def to_config(data)
-			conf = ConfigurationNode.new(@option.package, nil, nil, nil)
+		def builder(data)
+			builder = Builder.new(self)
+			conf = ConfigurationNode.new(@option.package, builder, nil, nil)
+			builder.conf = conf
 			@option.apply_config(conf, data)
-			conf
+			builder
 		end
 
 		def load_config(data)

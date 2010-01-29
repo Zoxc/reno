@@ -34,7 +34,7 @@ module Reno
 		end
 		
 		def source(*args, &block)
-			@children << SourceOption.new(@package, self, block)
+			@children << SourceOption.new(@package, self, block, args)
 		end
 		
 		alias :sources :source
@@ -74,10 +74,11 @@ module Reno
 	class SourceOption < Option
 		def initialize(*args, sources)
 			@sources = sources
-			super
+			super *args
 		end
 		
 		def apply_config(conf, data)
+			conf.builder.sources.concat(@sources)
 			conf = conf.derive(@sources)
 			super
 		end

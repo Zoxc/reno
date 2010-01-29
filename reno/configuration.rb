@@ -1,10 +1,10 @@
 module Reno
 	class ConfigurationNode
-		attr_reader :langs, :conf, :parent
+		attr_reader :langs, :builder, :parent
 		
-		def initialize(package, conf, parent, patterns)
+		def initialize(package, builder, parent, patterns)
 			@package = package
-			@conf = conf
+			@builder = builder
 			@parent = parent
 			@patterns = patterns
 			@children = []
@@ -12,7 +12,7 @@ module Reno
 		end
 		
 		def derive(patterns)
-			ConfigurationNode.new(@package, @conf, self, patterns)
+			ConfigurationNode.new(@package, @builder, self, patterns)
 		end
 	end
 end
