@@ -22,6 +22,10 @@ module Reno
 		class Compiler
 			attr_reader :option
 			
+			def self.get_dependencies(file)
+				file.language.get_dependencies(file)
+			end
+			
 			def self.register(*languages)
 				languages.each do |language|
 					Compilers.register(self, language)

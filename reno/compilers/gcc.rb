@@ -3,8 +3,14 @@ module Reno
 		class Gcc < Compiler
 			register 'C'
 			
-			def self.compile(file)
-				puts "Compiling #{file.name} as #{file.language}..."
+			class << self	
+				def command
+					ENV['CC'] || 'gcc'
+				end
+					
+				def  compile(file)
+					Builder.execute(command, '-c', file.path, '-o', file.output)
+				end
 			end
 		end
 	end

@@ -5,11 +5,11 @@ module Reno
 	end
 	
 	class SourceFile
-		attr_reader :path, :name
+		attr_reader :path, :name, :row
 		
 		def self.locate(builder, filename)
 			builder.lock.synchronize do
-				return builder.cache[:filename] || new(builder, filename)
+				return builder.cache[filename] || new(builder, filename)
 			end
 		end
 		
@@ -20,17 +20,14 @@ module Reno
 			@changed_lock = Mutex.new
 			@language_lock = Mutex.new
 			@compiler_lock = Mutex.new
-			@builder.cache[:filename] = self
+			@output_lock = Mutex.new
+			@content_lock = Mutex.new
+			@digest_lock = Mutex.new
+			@builder.cache[filename] = self
 			@db = @builder.sqlcache.db
 			@row = Cache::FileModel.new(@db[:files], @name) do
-				{:name => @name, :md5 => @builder.digest(@name), :dependencies => false, :output => nil}
+				{:name => @name, :md5 => digest, :dependencies => false, :output => nil}
 			end
-		end
-		
-		def lock
-			yield self
-		ensure	
-			@row.flush
 		end
 		
 		def find_language
@@ -47,6 +44,24 @@ module Reno
 			raise SourceFileError, "Unable to find a language for the file '#{@name}'."
 		end
 		
+		def digest
+			@digest_lock.synchronize do
+				@digest ||= Digest::MD5.hexdigest(content)
+			end
+		end
+		
+		def content
+			@content_lock.synchronize do
+				@content ||= File.open(@path, 'rb') { |f| f.read }
+			end
+		end
+		
+		def output
+			@output_lock.synchronize do
+				@output ||= @builder.output(@name + '.o')
+			end
+		end
+		
 		def language
 			@language_lock.synchronize do
 				@language ||= find_language
@@ -60,12 +75,15 @@ module Reno
 		end
 		
 		def get_dependencies
+			@builder.puts "Getting dependencies for #{@name}..."
 			@db[:dependencies].filter(:file => @row[:id]).delete
 			
+			dependencies = compiler.get_dependencies(self)
+			dependencies.each do |path|
+				file = SourceFile.locate(@builder, Builder.cleanpath(@builder.base, path))
+				@db[:dependencies].insert(:file => @row[:id], :dependency => file.row[:id])
+			end
 			
-			puts language.inspect
-			#puts language.get_dependencies(self).inspect
-			#@dependencies = cache.db.from(:dependencies).filter(:file => row[:id])
 			@row[:dependencies] = true
 		end
 		
@@ -83,16 +101,19 @@ module Reno
 			@changed_lock.synchronize do
 				return @changed if @changed != nil
 				
-				# Check if the file has changed and reset dependencies if needed
-				md5 = @builder.digest(@name)
-
-				if @row[:md5] != md5 then
+				# Check if the file has changed and reset dependencies and output if needed
+				if @row[:md5] != digest then
 					@row[:dependencies] = false
-					@row[:md5] = md5
-					return true
+					@row[:output] = nil
+					@row[:md5] = digest
+					@changed = true
+				else
+					@changed = dependencies_changed? ? true : false
 				end
 
-				@changed = dependencies_changed?
+				@row[:output] = nil if @changed
+				
+				@changed
 			end
 		end
 		
@@ -104,7 +125,16 @@ module Reno
 		
 		def build
 			if rebuild?
+				@builder.puts "Compiling #{@name}..."
 				compiler.compile(self)
+				
+				@output_lock.synchronize do
+					if File.exists? @output
+						@row[:output] = @output
+					else
+						raise SourceFileError, "Can't find output '#{@output}' from #{name}."
+					end
+				end
 			end
 		end
 	end

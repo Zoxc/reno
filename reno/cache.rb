@@ -8,9 +8,7 @@ module Reno
 		class FileModel
 			def initialize(db, name, &block)
 				@db = db
-				@row = @db[:name => @name]
-				@changes = {}
-				
+				@row = @db[:name => name]
 				unless @row
 					@row = block.call
 					@row[:id] = @db.insert(@row)
@@ -23,23 +21,12 @@ module Reno
 			
 			def []=(name, value)
 				@row[name] = value
-				@changes[name] = value
-			end
-			
-			def flush
-				unless @changes.empty?
-					@db.filter(:id => @row[:id]).update(@changes)
-					@changes = {}
-				end
+				@db.filter(:id => @row[:id]).update(name => value)
 			end
 		end
 		
-		def initialize(base)
-			@base = base
-			db = File.expand_path('build/cache.db', @base)
-			Builder.readydirs(base, db)
-			
-			@db = Sequel.sqlite(:database => db)
+		def initialize(builder)
+			@db = Sequel.sqlite(:database => builder.output('cache.db'))
 			
 			@db.create_table(:files) do
 				primary_key :id
@@ -54,13 +41,6 @@ module Reno
 				Integer :file
 				Integer :dependency
 			end unless @db.table_exists?(:dependencies)
-		end
-		
-		def update_md5(id, md5)
-		end
-		
-		def locate(file)
-			@db.from(:files)[:name => file]
 		end
 	end
 end
