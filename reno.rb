@@ -14,5 +14,6 @@ module Reno
 	require 'reno/sourcefile'
 	require 'reno/options'
 	require 'reno/languages'
+	require 'reno/compilers'
 	require 'reno/package'
 end

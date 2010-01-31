@@ -5,9 +5,38 @@ module Reno
 	class Cache
 		attr_reader :base, :db
 		
+		class FileModel
+			def initialize(db, name, &block)
+				@db = db
+				@row = @db[:name => @name]
+				@changes = {}
+				
+				unless @row
+					@row = block.call
+					@row[:id] = @db.insert(@row)
+				end
+			end
+			
+			def [](name)
+				@row[name]
+			end
+			
+			def []=(name, value)
+				@row[name] = value
+				@changes[name] = value
+			end
+			
+			def flush
+				unless @changes.empty?
+					@db.filter(:id => @row[:id]).update(@changes)
+					@changes = {}
+				end
+			end
+		end
+		
 		def initialize(base)
 			@base = base
-			db = File.join(@base, 'build/cache.db')
+			db = File.expand_path('build/cache.db', @base)
 			Builder.readydirs(base, db)
 			
 			@db = Sequel.sqlite(:database => db)
@@ -16,6 +45,8 @@ module Reno
 				primary_key :id
 				String :name
 				String :md5
+				String :output
+				FalseClass :dependencies
 			end unless @db.table_exists?(:files)
 			
 			@db.create_table(:dependencies) do

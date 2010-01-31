@@ -1,10 +1,12 @@
 module Reno
 	module Languages
 		class C < Language
+			self.name = 'C'
+			
 			attr_reader :defines
 			
 			def self.extensions
-				['c']
+				['.c']
 			end
 			
 			def initialize(*args)
