@@ -8,12 +8,13 @@ module Reno
 		$LOAD_PATH.unshift(ROOT)
 	end
 
+	require 'reno/lock'
 	require 'reno/configuration'
 	require 'reno/builder'
 	require 'reno/cache'
 	require 'reno/sourcefile'
 	require 'reno/options'
 	require 'reno/languages'
-	require 'reno/compilers'
+	require 'reno/toolchains'
 	require 'reno/package'
 end

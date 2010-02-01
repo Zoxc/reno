@@ -8,22 +8,22 @@ module Reno
 		attr_reader :path, :name, :row
 		
 		def self.locate(builder, filename)
-			builder.lock.synchronize do
-				return builder.cache[filename] || new(builder, filename)
+			builder.cache.lock do |cache|
+				return cache[filename] || new(builder, filename, cache)
 			end
 		end
 		
-		def initialize(builder, filename)
+		def initialize(builder, filename, cache)
 			@builder = builder
 			@name = filename
 			@path = File.expand_path(@name, @builder.base)
-			@changed_lock = Mutex.new
-			@language_lock = Mutex.new
-			@compiler_lock = Mutex.new
-			@output_lock = Mutex.new
-			@content_lock = Mutex.new
-			@digest_lock = Mutex.new
-			@builder.cache[filename] = self
+			@changed = Lock.new
+			@language = Lock.new
+			@compiler = Lock.new
+			@output = Lock.new
+			@content = Lock.new
+			@digest = Lock.new
+			cache[filename] = self
 			@db = @builder.sqlcache.db
 			@row = Cache::FileModel.new(@db[:files], @name) do
 				{:name => @name, :md5 => digest, :dependencies => false, :output => nil}
@@ -45,33 +45,23 @@ module Reno
 		end
 		
 		def digest
-			@digest_lock.synchronize do
-				@digest ||= Digest::MD5.hexdigest(content)
-			end
+			@digest.value {	Digest::MD5.hexdigest(content) }
 		end
 		
 		def content
-			@content_lock.synchronize do
-				@content ||= File.open(@path, 'rb') { |f| f.read }
-			end
+			@content.value { File.open(@path, 'rb') { |f| f.read } }
 		end
 		
 		def output
-			@output_lock.synchronize do
-				@output ||= @builder.output(@name + '.o')
-			end
+			@output.value { @builder.output(@name + '.o') }
 		end
 		
 		def language
-			@language_lock.synchronize do
-				@language ||= find_language
-			end
+			@language.value { find_language }
 		end
 		
 		def compiler
-			@compiler_lock.synchronize do
-				@compiler ||= Compilers.locate(language.name)
-			end
+			@compiler.value { Toolchains.locate(language) }
 		end
 		
 		def get_dependencies
@@ -98,22 +88,22 @@ module Reno
 		end
 		
 		def changed?
-			@changed_lock.synchronize do
-				return @changed if @changed != nil
+			@changed.value do |changed|
+				changed = nil
 				
 				# Check if the file has changed and reset dependencies and output if needed
 				if @row[:md5] != digest then
 					@row[:dependencies] = false
 					@row[:output] = nil
 					@row[:md5] = digest
-					@changed = true
+					changed = true
 				else
-					@changed = dependencies_changed? ? true : false
+					changed = dependencies_changed? ? true : false
 				end
 
-				@row[:output] = nil if @changed
+				@row[:output] = nil if changed
 				
-				@changed
+				changed
 			end
 		end
 		
@@ -124,17 +114,15 @@ module Reno
 		end
 		
 		def build
-			if rebuild?
-				@builder.puts "Compiling #{@name}..."
-				compiler.compile(self)
-				
-				@output_lock.synchronize do
-					if File.exists? @output
-						@row[:output] = @output
-					else
-						raise SourceFileError, "Can't find output '#{@output}' from #{name}."
-					end
-				end
+			@builder.puts "Compiling #{@name}..."
+			compiler.compile(self)
+			
+			output = @output.value
+			
+			if File.exists? output
+				@row[:output] = output
+			else
+				raise SourceFileError, "Can't find output '#{output}' from #{name}."
 			end
 		end
 	end

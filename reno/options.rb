@@ -1,6 +1,6 @@
 module Reno
 	class Option
-		attr_reader :package, :parent, :name, :desc, :children, :default
+		attr_reader :package, :parent, :name, :desc, :children
 		
 		def initialize(package, parent, name = nil, desc = nil, default = nil, block)
 			@package = package

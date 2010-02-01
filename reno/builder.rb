@@ -2,10 +2,12 @@ require 'pathname'
 require 'fileutils'
 
 module Reno
+	class BuilderError < StandardError
+	end
+	
 	class Builder
-		attr_reader :sources, :cache, :sqlcache, :lock, :base, :output
-		attr :conf, true
-		
+		attr_reader :sources, :cache, :sqlcache, :base, :output, :objects, :package
+
 		def self.readydirs(path)
 			FileUtils.makedirs(File.dirname(path))
 		end
@@ -53,26 +55,26 @@ module Reno
 		end
 		
 		def output(file)
-			result = File.expand_path(File.join(@output, file), @base)
+			result = File.expand_path(file, @bulid_base)
 			Builder.readydirs(result)
 			result
 		end
 		
 		def initialize(package)
 			@package = package
+			@changed = Lock.new
 			@base = @package.base
-			@output = @package.output
+			@bulid_base = File.expand_path(@package.output, @base)
+			@objects = Lock.new([])
+			@files = Lock.new([])
 			@sources = []
-			@lock = Mutex.new
 			@puts_lock = Mutex.new
-			@files_lock = Mutex.new
-			@cache = {}		
+			@cache =  Lock.new({})
 		end
 		
 		def run(threads = 8)
 			# Creates an unique list of the files
-			@files = FileList[*@sources].to_a.map { |file| Builder.cleanpath(@base, file) }.uniq
-		
+			@files.value = FileList[*@sources].to_a.map { |file| Builder.cleanpath(@base, file) }.uniq
 			@sqlcache = Cache.new(self)
 			
 			# Start worker threads	
@@ -85,17 +87,50 @@ module Reno
 			
 			# Wait for all the workers
 			workers.each { |worker| worker.join }
+			
+			# Normalize locks
+			@objects = @objects.value
+			
+			# Link the package if it changed or the output doesn't exist
+			
+			output_name = output(package.output_name)
+			
+			if @changed.value || !File.exists?(output_name)
+				puts "Linking #{@package.name}..."
+				
+				# Find a toochain to link this package
+				linker = @package.default[:linker]
+				linker = Toolchains::Hash.values.first unless linker
+				raise BuilderError, "Unable to find a linker to use." unless linker
+				
+				linker.link(self, output(package.output_name))
+			else
+				puts "Nothing to do with #{@package.name}."
+			end
 		end
 		
 		def get_file
-			@files_lock.synchronize do
-				@files.pop
+			@files.lock do |files|
+				files.pop
+			end
+		end
+		
+		def output_file(result)
+			@objects.lock do |output|
+				output << result
 			end
 		end
 		
 		def work
 			while filename = get_file
-				SourceFile.locate(self, filename).build
+				file = SourceFile.locate(self, filename)
+				file.build
+				rebuild = file.rebuild?
+				if rebuild
+					@changed.value = true
+					file.build
+				end
+				output_file file
 			end
 		end
 	end

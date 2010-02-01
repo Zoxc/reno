@@ -41,6 +41,10 @@ module Reno
 			self
 		end
 		
+		def output_name
+			raise "You can't link packages!"
+		end
+		
 		def name=(name)
 			raise "You have already assigned this package a name" if @name
 			
@@ -53,7 +57,6 @@ module Reno
 		def builder(data)
 			builder = Builder.new(self)
 			conf = ConfigurationNode.new(@option.package, builder, nil, nil)
-			builder.conf = conf
 			@option.apply_config(conf, data)
 			builder
 		end
@@ -65,8 +68,22 @@ module Reno
 	end
 
 	class Library < Package
+		def output_name
+			if Rake::Win32.windows?
+				@name + '.dll'
+			else
+				@name + '.so'
+			end
+		end
 	end
 	
 	class Application < Package
+		def output_name
+			if Rake::Win32.windows?
+				@name + '.exe'
+			else
+				@name
+			end
+		end
 	end
 end
