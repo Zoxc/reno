@@ -5,6 +5,5 @@ Gem::Specification.new do |s|
 	s.require_path = '.'
 	s.required_ruby_version = '>= 1.9.0'
 	s.summary = 'Reno is a compiling framework in Ruby.'
-	s.files = ['LICENSE', 'reno.rb']
-	s.files << Dir['reno/**/*']
+	s.files = Dir['LICENSE', 'reno.rb', 'reno/**/*']
 end
