@@ -14,9 +14,9 @@ module Reno
 		end
 		
 		def apply_config(conf, data)
-			conf.langs << @langs
+			conf.add(:langs, [@langs])
 			@children.each do |child|
-				child_data = data.elements.find { |element| element.attribute('name').value == child.name && element.name == child.xml_node } if data
+				child_data = data.elements.find { |element| element.attribute('name').value == child.name.to_s && element.name == child.xml_node } if data
 				child.apply_config(conf, child_data)
 			end
 		end
@@ -60,7 +60,7 @@ module Reno
 	
 	class BooleanOption < Option
 		def apply_config(conf, data)
-			if (data && data.attribute('value')) ? data.attribute('value').value : @default
+			if (data && data.attribute('value')) ? data.attribute('value').value == "true" : @default
 				super
 			end
 		end
@@ -78,7 +78,6 @@ module Reno
 		end
 		
 		def apply_config(conf, data)
-			conf.builder.sources.concat(@sources)
 			conf = conf.derive(@sources)
 			super
 		end

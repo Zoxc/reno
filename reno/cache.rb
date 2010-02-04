@@ -25,22 +25,34 @@ module Reno
 			end
 		end
 		
+		def setup_table(name, &block)
+			@db.create_table(name, &block) unless @db.table_exists?(name)
+		end
+		
 		def initialize(builder)
 			@db = Sequel.sqlite(:database => builder.output('cache.db'))
 			
-			@db.create_table(:files) do
-				primary_key :id
+			setup_table :files do
+				primary_key :id, :type => Integer
 				String :name
 				String :md5
 				String :output
 				FalseClass :dependencies
-			end unless @db.table_exists?(:files)
+			end
 			
-			@db.create_table(:dependencies) do
+			setup_table :dependencies do
 				primary_key :id, :type => Integer
 				Integer :file
 				Integer :dependency
-			end unless @db.table_exists?(:dependencies)
+			end
+			
+			Languages.constants.each do |language|
+				language = Languages.const_get(language)
+				
+				next if language.superclass != Languages::Language
+				
+				language.setup_schema(self)
+			end
 		end
 	end
 end

@@ -56,8 +56,9 @@ module Reno
 		
 		def builder(data)
 			builder = Builder.new(self)
-			conf = ConfigurationNode.new(@option.package, builder, nil, nil)
+			conf = ConfigurationNode.new(@option.package, builder, nil, [])
 			@option.apply_config(conf, data)
+			builder.conf = conf
 			builder
 		end
 

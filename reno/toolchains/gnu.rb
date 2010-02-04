@@ -9,7 +9,15 @@ module Reno
 				end
 				
 				def compile(file)
-					Builder.execute(command(file), '-c', file.path, '-o', file.output)
+					Builder.execute(command(file), *defines(file), '-c', file.path, '-o', file.output)
+				end
+				
+				def defines(file)
+					defines = []
+					file.lang_conf.defines.each_pair do |key, value|
+						defines << '-D' << (value ? "#{key}=#{value}" : key.to_s)
+					end
+					defines
 				end
 				
 				def link(builder, output)

@@ -6,7 +6,8 @@ module Reno
 	end
 	
 	class Builder
-		attr_reader :sources, :cache, :sqlcache, :base, :output, :objects, :package
+		attr_reader :sources, :cache, :sqlcache, :base, :output, :objects, :package, :conf
+		attr :conf, true
 
 		def self.readydirs(path)
 			FileUtils.makedirs(File.dirname(path))
@@ -67,14 +68,13 @@ module Reno
 			@bulid_base = File.expand_path(@package.output, @base)
 			@objects = Lock.new([])
 			@files = Lock.new([])
-			@sources = []
 			@puts_lock = Mutex.new
 			@cache =  Lock.new({})
 		end
 		
 		def run(threads = 8)
 			# Creates an unique list of the files
-			@files.value = FileList[*@sources].to_a.map { |file| Builder.cleanpath(@base, file) }.uniq
+			@files.value = FileList[*@conf.get(:patterns)].to_a.map { |file| Builder.cleanpath(@base, file) }.uniq
 			@sqlcache = Cache.new(self)
 			
 			# Start worker threads	
@@ -124,7 +124,6 @@ module Reno
 		def work
 			while filename = get_file
 				file = SourceFile.locate(self, filename)
-				file.build
 				rebuild = file.rebuild?
 				if rebuild
 					@changed.value = true

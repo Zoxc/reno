@@ -5,7 +5,7 @@ module Reno
 	end
 	
 	class SourceFile
-		attr_reader :path, :name, :row
+		attr_reader :path, :name, :row, :db, :builder
 		
 		def self.locate(builder, filename)
 			builder.cache.lock do |cache|
@@ -19,6 +19,7 @@ module Reno
 			@path = File.expand_path(@name, @builder.base)
 			@changed = Lock.new
 			@language = Lock.new
+			@lang_conf = Lock.new
 			@compiler = Lock.new
 			@output = Lock.new
 			@content = Lock.new
@@ -64,6 +65,13 @@ module Reno
 			@compiler.value { Toolchains.locate(language) }
 		end
 		
+		def lang_conf
+			@lang_conf.value do
+				langs = @builder.conf.get(:langs, nil).map { |langs| langs[language] }.reject { |lang| !lang }
+				language.merge(langs)
+			end
+		end
+		
 		def get_dependencies
 			@builder.puts "Getting dependencies for #{@name}..."
 			@db[:dependencies].filter(:file => @row[:id]).delete
@@ -89,12 +97,13 @@ module Reno
 		
 		def changed?
 			@changed.value do |changed|
-				changed = nil
-				
 				# Check if the file has changed and reset dependencies and output if needed
-				if @row[:md5] != digest then
+				
+				if !File.exists?(@path)
 					@row[:dependencies] = false
-					@row[:output] = nil
+					changed = true
+				elsif @row[:md5] != digest then
+					@row[:dependencies] = false
 					@row[:md5] = digest
 					changed = true
 				else
@@ -108,8 +117,8 @@ module Reno
 		end
 		
 		def rebuild?
-			return true unless @row[:output] and File.exists?(File.expand_path(@row[:output], @builder.base))
-		
+			return true unless @row[:output] and File.exists?(File.expand_path(@row[:output], @builder.base)) and lang_conf.compare(self)
+			
 			changed?
 		end
 		
@@ -121,6 +130,7 @@ module Reno
 			
 			if File.exists? output
 				@row[:output] = output
+				lang_conf.store(self)
 			else
 				raise SourceFileError, "Can't find output '#{output}' from #{name}."
 			end

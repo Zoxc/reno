@@ -5,6 +5,56 @@ module Reno
 			
 			attr_reader :defines
 			
+			def initialize(*args)
+				@defines = {}
+				@headers = []
+				super
+			end
+			
+			def compare(file)
+				defines = file.db[self.class.table_name(:defines)]
+				hash = {}
+				
+				defines.filter(:file => file.row[:id]).all do |row|
+					hash[row[:define]] = row[:value]
+				end
+				
+				hash == @defines
+			end
+			
+			def store(file)
+				defines = file.db[self.class.table_name(:defines)]
+				
+				# Delete existing defines				
+				defines.filter(:file => file.row[:id]).delete
+				
+				# Add the current ones
+				@defines.each_pair do |key, value|
+					defines.insert(:file => file.row[:id], :define => key, :value => value)
+				end
+			end
+			
+			def self.setup_schema(cache)
+				setup_table(cache, :defines) do
+					primary_key :id, :type => Integer
+					Integer :file
+					String :define
+					String :value
+				end
+			end
+			
+			def merge(other)
+				@defines.merge!(other.defines)
+			end
+			
+			def define(name, value = nil)
+				@defines[name] = value
+			end
+			
+			def headers(*dirs)
+				@headers.concat(dirs)
+			end
+			
 			def self.extensions
 				['.c', '.h']
 			end
@@ -68,15 +118,6 @@ module Reno
 				end
 				
 				includes
-			end
-			
-			def initialize(*args)
-				@defines = {}
-				super
-			end
-			
-			def define(name, value = nil)
-				@defines[name] = value
 			end
 		end
 	end
