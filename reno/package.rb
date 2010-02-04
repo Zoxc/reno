@@ -16,23 +16,15 @@ module Reno
 		def version(version)
 			@package.version = version
 		end
-		
-		def compiler(hash)
-			# Verify that all languages exist
-			hash.each_key { |key| Languages.locate(key) }
-			
-			@package.compilers.merge!(hash)
-		end
 	end
 
 	class Package
-		attr_reader :default, :name, :compilers, :base, :output
+		attr_reader :default, :name, :base, :output
 		attr :desc, true
 		attr :version, true
 
 		def initialize(&block)
 			@default = {}
-			@compilers = {}
 			@output = 'build'
 			@base = Dir.getwd
 			# This should be the last thing to be set up. The object might depend on the other variables.

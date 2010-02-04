@@ -67,7 +67,7 @@ module Reno
 		
 		def lang_conf
 			@lang_conf.value do
-				langs = @builder.conf.get(:langs, nil).map { |langs| langs[language] }.reject { |lang| !lang }
+				langs = @builder.conf.get(:langs, nil).map { |langs| langs[language.name] }.reject { |lang| !lang }
 				language.merge(langs)
 			end
 		end

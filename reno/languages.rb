@@ -3,25 +3,17 @@ module Reno
 		class LanguageError < StandardError
 		end
 		
-		def self.locate(name, default = nil, cache = nil)
-			lang = name || default
-			
-			raise "Unable to find the default language." unless lang
-			
-			lang = lang.to_s
-			
-			return cache[lang] if cache && cache[lang]
-			
-			Languages.constants.map { |name| Languages.const_get(name) }.each do |language|
+		def self.locate(name)
+			Languages.constants.map { |lang| Languages.const_get(lang) }.each do |language|
 
 				next if language.superclass != Language
 				
-				if language.name == lang
+				if language.name == name
 					return language
 				end
 			end
 			
-			raise "Unable to find the language '#{lang}'."
+			raise "Unable to find the language '#{name}'."
 		end
 	
 		class Language
@@ -39,7 +31,10 @@ module Reno
 			def get_dependencies(file)
 				[]
 			end
-
+			
+			def read(name)
+				instance_variable_get "@#{name}"
+			end
 			
 			class << self
 				attr :name, true

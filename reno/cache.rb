@@ -41,7 +41,6 @@ module Reno
 			end
 			
 			setup_table :dependencies do
-				primary_key :id, :type => Integer
 				Integer :file
 				Integer :dependency
 			end

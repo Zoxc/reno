@@ -1,6 +1,6 @@
 module Reno
 	module Toolchains
-		class CompilerError < StandardError
+		class ToolchainError < StandardError
 		end
 		
 		Hash = {}

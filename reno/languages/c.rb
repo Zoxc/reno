@@ -3,52 +3,84 @@ module Reno
 		class C < Language
 			self.name = 'C'
 			
-			attr_reader :defines
-			
 			def initialize(*args)
 				@defines = {}
 				@headers = []
+				@std = nil
+				@strict = nil
 				super
 			end
 			
 			def compare(file)
 				defines = file.db[self.class.table_name(:defines)]
+				attribs = file.db[self.class.table_name(:attribs)]
+				
 				hash = {}
 				
 				defines.filter(:file => file.row[:id]).all do |row|
 					hash[row[:define]] = row[:value]
 				end
 				
-				hash == @defines
+				attribs = attribs.filter(:file => file.row[:id]).first
+				attribs = {:std => nil, :strict => false} unless attribs
+				
+				hash == @defines and attribs[:std] == @std.to_s and attribs[:strict] == @strict
+			end
+			
+			def print(*values)
+				puts values.inspect
 			end
 			
 			def store(file)
 				defines = file.db[self.class.table_name(:defines)]
+				attribs = file.db[self.class.table_name(:attribs)]
 				
-				# Delete existing defines				
+				# Delete existing rows				
 				defines.filter(:file => file.row[:id]).delete
+				attribs.filter(:file => file.row[:id]).delete
 				
 				# Add the current ones
 				@defines.each_pair do |key, value|
 					defines.insert(:file => file.row[:id], :define => key, :value => value)
 				end
+				
+				attribs.insert(:file => file.row[:id], :strict => @strict, :std => @std.to_s)
 			end
 			
 			def self.setup_schema(cache)
 				setup_table(cache, :defines) do
-					primary_key :id, :type => Integer
 					Integer :file
 					String :define
 					String :value
 				end
+				
+				setup_table(cache, :attribs) do
+					Integer :file
+					FalseClass :strict
+					String :std
+				end
 			end
 			
 			def merge(other)
-				@defines.merge!(other.defines)
+				@defines.merge!(other.read(:defines))
+				
+				other_value = other.read(:std)
+				@std = other_value if other_value
+				
+				other_value = other.read(:strict)
+				@strict = other_value if other_value != nil
 			end
 			
 			def define(name, value = nil)
 				@defines[name] = value
+			end
+			
+			def strict(value = true)
+				@strict = value
+			end
+			
+			def std(value)
+				@std = value
 			end
 			
 			def headers(*dirs)

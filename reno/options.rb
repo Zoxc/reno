@@ -43,16 +43,16 @@ module Reno
 			@package.default.merge!(hash)
 		end
 		
-		def compiler(hash)
-			# Verify that all languages exist
-			hash.each_key { |key| Languages.locate(key) }
-			
-			@package.compilers.merge!(hash)
-		end
-
 		def lang(name = nil, &block)
-			lang = Languages.locate(name, @package.default[:lang], @langs)
-			obj = lang.new(self, block)
+			lang = name || @package.default[:lang]
+			
+			raise "Unable to find the default language." unless lang
+			
+			lang = lang.to_s
+			
+			return @langs[lang] if @langs[lang]
+			
+			obj = Languages.locate(lang).new(self, block)
 			@langs[lang] = obj
 			obj
 		end
