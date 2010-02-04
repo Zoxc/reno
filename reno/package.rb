@@ -46,7 +46,7 @@ module Reno
 			Packages[@name] = self
 		end
 		
-		def builder(data)
+		def builder(data = nil)
 			builder = Builder.new(self)
 			conf = ConfigurationNode.new(@option.package, builder, nil, [])
 			@option.apply_config(conf, data)
