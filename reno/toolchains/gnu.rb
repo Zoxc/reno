@@ -45,7 +45,7 @@ module Reno
 				end
 				
 				def link(builder, output)
-					Builder.execute(command(file), '-pipe', *builder.objects.map { |object| object.output }, '-o', output)
+					Builder.execute(command, '-pipe', *builder.objects.map { |object| object.output }, '-o', output)
 				end
 			end
 		end

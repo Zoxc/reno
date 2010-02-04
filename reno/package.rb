@@ -72,7 +72,7 @@ module Reno
 	
 	class Application < Package
 		def output_name
-			if Rake::Win32.windows?
+			if Platforms.current == Platforms::Windows
 				@name + '.exe'
 			else
 				@name

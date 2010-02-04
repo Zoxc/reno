@@ -74,7 +74,7 @@ module Reno
 		
 		def run(threads = 8)
 			# Creates an unique list of the files
-			@files.value = FileList[*@conf.get(:patterns)].to_a.map { |file| Builder.cleanpath(@base, file) }.uniq
+			@files.value = Dir[*@conf.get(:patterns)].map { |file| Builder.cleanpath(@base, file) }.uniq
 			@sqlcache = Cache.new(self)
 			
 			# Start worker threads	
