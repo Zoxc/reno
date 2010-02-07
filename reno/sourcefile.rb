@@ -123,7 +123,7 @@ module Reno
 		end
 		
 		def build
-			@builder.puts "Compiling #{@name}..."
+			@builder.puts "Compiling #{builder.package.name}::#{@name}..."
 			compiler.compile(self)
 			
 			output = @output.value

@@ -18,7 +18,7 @@ module Reno
 				end
 				
 				def compile(file)
-					Builder.execute(command(file), '-pipe', *defines(file), *std(file), '-x', language(file), '-c', file.path, '-o', file.output)
+					Builder.execute(command(file), '-pipe', *if shared_library?(file.builder); '-fPIC' end, *defines(file), *std(file), '-x', language(file), '-c', file.path, '-o', file.output)
 				end
 				
 				def std(file)
@@ -44,8 +44,12 @@ module Reno
 					defines
 				end
 				
+				def shared_library?(builder)
+					builder.package.type == :library && builder.library != :static
+				end
+				
 				def link(builder, output)
-					Builder.execute(command, '-pipe', *builder.objects.map { |object| object.output }, '-o', output)
+					Builder.execute(command, '-pipe', *if shared_library?(builder); '-shared' end, *builder.dependencies.map { |dependency| dependency.output }, *builder.objects.map { |object| object.output }, '-o', output)
 				end
 			end
 		end

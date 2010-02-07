@@ -37,6 +37,37 @@ module Reno
 			@children << SourceOption.new(@package, self, block, args)
 		end
 		
+		def dependency(name, path = '.')
+			name = name.to_s
+			package = Packages[name]
+			
+			unless package
+				dir = File.expand_path(path, @package.base)
+				file = File.join(dir, "#{name}.renofile")
+				
+				if File.exists? file
+					begin
+						old_path = Thread.current[:"Reno::Package.wd"]
+						Thread.current[:"Reno::Package.wd"] = dir
+						
+						unless $LOAD_PATH.any? { |lp| File.expand_path(lp) == dir }
+							$LOAD_PATH.unshift(dir)
+						end
+						
+						load file
+					ensure
+						Thread.current[:"Reno::Package.wd"] = old_path
+					end
+					
+					package = Packages[name]
+				end
+				
+				raise PackageError, "Unable to find dependency '#{name}' for package '#{@package.name}'." unless package
+			end
+			
+			@package.dependency(package)
+		end
+		
 		alias :sources :source
 		
 		def default(hash)

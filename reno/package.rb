@@ -17,23 +17,38 @@ module Reno
 			@package.version = version
 		end
 	end
+	
+	class PackageResult
+		attr_reader :package, :conf, :mutex, :output
+		
+		def initialize(package, conf, mutex, output)
+			@package = package
+			@conf = conf
+			@mutex = mutex
+			@output = output
+		end
+	end
 
 	class Package
-		attr_reader :default, :name, :base, :output
+		attr_reader :default, :name, :base, :output, :type
 		attr :desc, true
 		attr :version, true
 
 		def initialize(&block)
 			@default = {}
 			@output = 'build'
-			@base = Dir.getwd
+			@base = Thread.current[:"Reno::Package.wd"]
+			@dependencies = []
+			@mutex = Mutex.new
+			@type = :application
+			
 			# This should be the last thing to be set up. The object might depend on the other variables.
 			@option = PackageOption.new(self, nil, block)
 
 			self
 		end
 		
-		def output_name
+		def output_name(builder)
 			raise "You can't link packages!"
 		end
 		
@@ -46,32 +61,59 @@ module Reno
 			Packages[@name] = self
 		end
 		
-		def builder(data = nil)
-			builder = Builder.new(self)
+		def dependency(dependency)
+			@dependencies << dependency
+		end
+		
+		def build_package(data, library)
+			dependencies = @dependencies.map { |dependency|	dependency.build_package(nil, nil) }
+			
+			@mutex.lock
+			
+			builder = Builder.new(self, library, dependencies)
 			conf = ConfigurationNode.new(@option.package, builder, nil, [])
 			@option.apply_config(conf, data)
 			builder.conf = conf
-			builder
+			builder.run
+			
+			output = builder.output_name
+			
+			dependencies.each { |dependency| dependency.mutex.unlock }
+			
+			PackageResult.new(self, conf, @mutex, output)
 		end
-
-		def load_config(data)
-			conf = PackageConf.new(self)
-			Options.new(conf, data, @options)
+		
+		def build(data = nil, library = nil)
+			build_package(data, library).mutex.unlock
 		end
 	end
+	
+	Thread.current[:"Reno::Package.wd"] = Dir.getwd
 
 	class Library < Package
-		def output_name
-			if Rake::Win32.windows?
-				@name + '.dll'
+		def initialize(*args)
+			result = super
+			@type = :library
+			result
+		end
+		
+		def output_name(builder)
+			if Platforms.current == Platforms::Windows
+				@name + (builder.library == :static ? '.lib' : '.dll')
 			else
-				@name + '.so'
+				@name + (builder.library == :static ? '.a' : '.so')
 			end
 		end
 	end
 	
+	class CompiledLibrary < Library
+		def builder(data, library)
+			
+		end
+	end
+	
 	class Application < Package
-		def output_name
+		def output_name(builder)
 			if Platforms.current == Platforms::Windows
 				@name + '.exe'
 			else

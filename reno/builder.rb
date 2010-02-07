@@ -6,7 +6,7 @@ module Reno
 	end
 	
 	class Builder
-		attr_reader :sources, :cache, :sqlcache, :base, :output, :objects, :package, :conf
+		attr_reader :sources, :cache, :sqlcache, :base, :output, :objects, :package, :conf, :library, :dependencies, :output_name
 		attr :conf, true
 
 		def self.readydirs(path)
@@ -61,7 +61,9 @@ module Reno
 			result
 		end
 		
-		def initialize(package)
+		def initialize(package, library, dependencies)
+			@dependencies = dependencies
+			@library = library
 			@package = package
 			@changed = Lock.new
 			@base = @package.base
@@ -70,11 +72,14 @@ module Reno
 			@files = Lock.new([])
 			@puts_lock = Mutex.new
 			@cache =  Lock.new({})
+			@output_name = output(@package.output_name(self))
 		end
 		
 		def run(threads = 8)
 			# Creates an unique list of the files
-			@files.value = Dir[*@conf.get(:patterns)].map { |file| Builder.cleanpath(@base, file) }.uniq
+			patterns = @conf.get(:patterns).map { |pattern| File.join(@base, pattern) }
+			@files.value = Dir[*patterns].map { |file| Builder.cleanpath(@base, file) }.uniq
+			
 			@sqlcache = Cache.new(self)
 			
 			# Start worker threads	
@@ -93,9 +98,7 @@ module Reno
 			
 			# Link the package if it changed or the output doesn't exist
 			
-			output_name = output(package.output_name)
-			
-			if @changed.value || !File.exists?(output_name)
+			if @changed.value || !File.exists?(@output_name)
 				puts "Linking #{@package.name}..."
 				
 				# Find a toochain to link this package
@@ -103,7 +106,7 @@ module Reno
 				linker = Toolchains::Hash.values.first unless linker
 				raise BuilderError, "Unable to find a linker to use." unless linker
 				
-				linker.link(self, output(package.output_name))
+				linker.link(self, @output_name)
 			else
 				puts "Nothing to do with #{@package.name}."
 			end

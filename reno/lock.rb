@@ -6,8 +6,12 @@ module Reno
 		end
 		
 		def lock
-			@mutex.synchronize do
-				yield @value
+			if block_given?
+				@mutex.synchronize do
+					yield @value
+				end
+			else
+				@mutex.synchronize
 			end
 		end
 		

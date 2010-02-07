@@ -21,9 +21,7 @@ module Reno
 		
 		def get(name, file = nil, base = nil)
 			if file && !@patterns.empty?
-				Dir.chdir(base) do
-					return nil unless @patterns.any? { |pattern| File.fnmatch?(pattern, file) }
-				end
+				return nil unless @patterns.any? { |pattern| File.fnmatch?(File.join(base, pattern), file) }
 			end
 			
 			child_values = []
