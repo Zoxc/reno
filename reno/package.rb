@@ -18,6 +18,51 @@ module Reno
 		end
 	end
 	
+	class Dependency
+		def locate(path)
+			package = Packages[@name]
+			
+			unless package
+				dir = File.expand_path(path, @parent.base)
+				file = File.join(dir, "#{@name}.renofile")
+				
+				if File.exists? file
+					begin
+						old_path = Thread.current[:"Reno::Package.wd"]
+						Thread.current[:"Reno::Package.wd"] = dir
+						
+						unless $LOAD_PATH.any? { |lp| File.expand_path(lp) == dir }
+							$LOAD_PATH.unshift(dir)
+						end
+						
+						load file
+					ensure
+						Thread.current[:"Reno::Package.wd"] = old_path
+					end
+				end
+			end
+			
+			return Packages[@name]
+		end
+		
+		def initialize(parent, name, options)
+			@parent = parent
+			@name = name.to_s
+			@library = options[:library]
+			
+			# Locate the package
+			paths = ['.', File.join('.', @name)]
+			paths.unshift(options[:path]) if options[:path]
+			paths.find { |path| @package = locate(path) }
+			
+			raise PackageError, "Unable to find dependency '#{@name}' for package '#{@parent.name}'." unless @package
+		end
+		
+		def build
+			@package.build_package(nil, @library)
+		end
+	end
+	
 	class PackageResult
 		attr_reader :package, :conf, :mutex, :output
 		
@@ -33,6 +78,10 @@ module Reno
 		attr_reader :default, :name, :base, :output, :type
 		attr :desc, true
 		attr :version, true
+		
+		def option_factory(block)
+			PackageOption.new(self, nil, block)
+		end
 
 		def initialize(&block)
 			@default = {}
@@ -43,7 +92,7 @@ module Reno
 			@type = :application
 			
 			# This should be the last thing to be set up. The object might depend on the other variables.
-			@option = PackageOption.new(self, nil, block)
+			@option = option_factory(block)
 
 			self
 		end
@@ -65,26 +114,37 @@ module Reno
 			@dependencies << dependency
 		end
 		
+		def create_conf
+			conf = ConfigurationNode.new(@option.package, nil, [])
+			
+			@option.apply_config(conf, data)
+			
+			conf
+		end
+		
 		def build_package(data, library)
-			dependencies = @dependencies.map { |dependency|	dependency.build_package(nil, nil) }
+			dependencies = @dependencies.map { |dependency|	dependency.build }
 			
 			@mutex.lock
 			
-			builder = Builder.new(self, library, dependencies)
-			conf = ConfigurationNode.new(@option.package, builder, nil, [])
-			@option.apply_config(conf, data)
-			builder.conf = conf
+			conf = create_conf
+			
+			builder = Builder.new(self, library, dependencies, conf)
 			builder.run
 			
 			output = builder.output_name
 			
-			dependencies.each { |dependency| dependency.mutex.unlock }
+			dependencies.each do |dependency|
+				mutex = dependency.mutex
+				mutex.unlock if mutex
+			end
 			
 			PackageResult.new(self, conf, @mutex, output)
 		end
 		
 		def build(data = nil, library = nil)
-			build_package(data, library).mutex.unlock
+			mutex = build_package(data, library).mutex
+			mutex.unlock if mutex
 		end
 	end
 	
@@ -106,9 +166,21 @@ module Reno
 		end
 	end
 	
+	class CompiledLibraryOption < PackageOption
+		def library(library, shared = false)
+			@package.library = {:library => library, :shared => shared}
+		end
+	end
+	
 	class CompiledLibrary < Library
-		def builder(data, library)
-			
+		attr :library, true
+		
+		def option_factory(block)
+			CompiledLibraryOption.new(self, nil, block)
+		end
+		
+		def build_package(data, library)
+			PackageResult.new(self, create_conf, nil, @library)
 		end
 	end
 	

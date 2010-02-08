@@ -61,11 +61,12 @@ module Reno
 			result
 		end
 		
-		def initialize(package, library, dependencies)
+		def initialize(package, library, dependencies, conf)
 			@dependencies = dependencies
 			@library = library
 			@package = package
 			@changed = Lock.new
+			@conf = conf
 			@base = @package.base
 			@bulid_base = File.expand_path(@package.output, @base)
 			@objects = Lock.new([])

@@ -73,7 +73,7 @@ module Reno
 		end
 		
 		def get_dependencies
-			@builder.puts "Getting dependencies for #{@name}..."
+			@builder.puts "Getting dependencies for #{builder.package.name} :: #{@name}..."
 			@db[:dependencies].filter(:file => @row[:id]).delete
 			
 			dependencies = compiler.get_dependencies(self)
@@ -123,7 +123,7 @@ module Reno
 		end
 		
 		def build
-			@builder.puts "Compiling #{builder.package.name}::#{@name}..."
+			@builder.puts "Compiling #{builder.package.name} :: #{@name}..."
 			compiler.compile(self)
 			
 			output = @output.value

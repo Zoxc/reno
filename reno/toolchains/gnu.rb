@@ -49,7 +49,11 @@ module Reno
 				end
 				
 				def link(builder, output)
-					Builder.execute(command, '-pipe', *if shared_library?(builder); '-shared' end, *builder.dependencies.map { |dependency| dependency.output }, *builder.objects.map { |object| object.output }, '-o', output)
+					if builder.package.type == :library && !shared_library?(builder)
+						Builder.execute('ar', 'rsc', output, *builder.objects.map { |object| object.output })
+					else
+						Builder.execute(command, '-pipe', *if shared_library?(builder); '-shared' end, *builder.dependencies.map { |dependency| dependency.output }, *builder.objects.map { |object| object.output }, '-o', output)
+					end
 				end
 			end
 		end
