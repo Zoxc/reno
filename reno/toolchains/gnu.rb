@@ -18,7 +18,9 @@ module Reno
 				end
 				
 				def compile(file)
-					Builder.execute(command(file), '-pipe', *if shared_library?(file.builder); '-fPIC' end, *defines(file), *std(file), '-x', language(file), '-c', file.path, '-o', file.output)
+					headers = file.language.extract_headers(file.language, file.builder.dependencies)
+					shared = if shared_library?(file.builder); '-fPIC' end
+					Builder.execute(command(file), '-pipe', *shared, *defines(file), *std(file), '-x', language(file), *headers.map { |header| ['-I', header]}.flatten, '-c', file.path, '-o', file.output)
 				end
 				
 				def std(file)

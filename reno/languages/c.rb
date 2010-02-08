@@ -69,6 +69,8 @@ module Reno
 				
 				other_value = other.read(:strict)
 				@strict = other_value if other_value != nil
+				
+				@headers.concat(other.read(:headers))
 			end
 			
 			def define(name, value = nil)
@@ -81,6 +83,19 @@ module Reno
 			
 			def std(value)
 				@std = value
+			end
+			
+			def self.extract_headers(language, dependencies)
+				headers = []
+				dependencies.each do |dependency|
+					langs = dependency.conf.get(:langs, nil).map { |langs| langs[language.name] }.reject { |lang| !lang }
+					puts language.merge(langs).read(:headers).inspect
+					language.merge(langs).read(:headers).each do |header|
+						headers << File.expand_path(header, dependency.package.base)
+						puts File.expand_path(header, dependency.package.base).inspect
+					end
+				end
+				headers
 			end
 			
 			def headers(*dirs)

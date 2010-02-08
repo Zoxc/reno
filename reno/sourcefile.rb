@@ -73,13 +73,17 @@ module Reno
 		end
 		
 		def get_dependencies
-			@builder.puts "Getting dependencies for #{builder.package.name} :: #{@name}..."
+			@builder.puts "Getting dependencies for #{builder.package.name} :: #{@name}"
 			@db[:dependencies].filter(:file => @row[:id]).delete
 			
 			dependencies = compiler.get_dependencies(self)
 			dependencies.each do |path|
-				file = SourceFile.locate(@builder, Builder.cleanpath(@builder.base, path))
-				@db[:dependencies].insert(:file => @row[:id], :dependency => file.row[:id])
+				path = Builder.cleanpath(@builder.base, path)
+				
+				if File.exists?(File.expand_path(path, @builder.base))
+					file = SourceFile.locate(@builder, path)
+					@db[:dependencies].insert(:file => @row[:id], :dependency => file.row[:id])
+				end
 			end
 			
 			@row[:dependencies] = true
@@ -123,7 +127,7 @@ module Reno
 		end
 		
 		def build
-			@builder.puts "Compiling #{builder.package.name} :: #{@name}..."
+			@builder.puts "Compiling #{builder.package.name} :: #{@name}"
 			compiler.compile(self)
 			
 			output = @output.value

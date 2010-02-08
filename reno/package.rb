@@ -114,7 +114,7 @@ module Reno
 			@dependencies << dependency
 		end
 		
-		def create_conf
+		def create_conf(data = nil)
 			conf = ConfigurationNode.new(@option.package, nil, [])
 			
 			@option.apply_config(conf, data)
@@ -127,7 +127,7 @@ module Reno
 			
 			@mutex.lock
 			
-			conf = create_conf
+			conf = create_conf(data)
 			
 			builder = Builder.new(self, library, dependencies, conf)
 			builder.run
