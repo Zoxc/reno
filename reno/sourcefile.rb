@@ -33,9 +33,8 @@ module Reno
 		
 		def find_language
 			file_ext = File.extname(@name).downcase
-			
 			Languages.constants.map { |name| Languages.const_get(name) }.each do |language|
-				next if language.superclass != Languages::Language
+				next unless Languages.is_language(language)
 				
 				if language.extensions.any? { |ext| ext == file_ext }
 					return language

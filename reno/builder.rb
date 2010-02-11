@@ -18,7 +18,7 @@ module Reno
 		end
 		
 		def self.execute(command, *args)
-			#puts [command, *args].join(' ')
+			puts [command, *args].join(' ')
 			IO.popen([command, *args]) do |f|
 				f.readlines
 			end

@@ -5,15 +5,35 @@ module Reno
 			
 			def initialize(*args)
 				@defines = {}
+				@exported_defines = {}
 				@headers = []
 				@std = nil
 				@strict = nil
 				super
 			end
 			
+			def calc_defines(file, language = C)
+				calced_defines = {}
+				
+				file.builder.dependencies.each do |dependency|
+					langs = dependency.conf.get(:langs, nil).map { |langs| langs[language.name] }.reject { |lang| !lang }
+					calced_defines.merge!(language.merge(langs).read(:exported_defines))
+				end
+				
+				calced_defines.merge!(@defines)
+				
+				calced_defines
+			end
+			
+			def get_defines(file)
+				return @calced_defines if @calced_defines 
+				
+				@calced_defines = calc_defines(file)
+			end
+			
 			def compare(file)
-				defines = file.db[self.class.table_name(:defines)]
-				attribs = file.db[self.class.table_name(:attribs)]
+				defines = file.db[self.class.table_name(:defines, C)]
+				attribs = file.db[self.class.table_name(:attribs, C)]
 				
 				hash = {}
 				
@@ -24,7 +44,7 @@ module Reno
 				attribs = attribs.filter(:file => file.row[:id]).first
 				attribs = {:std => nil, :strict => false} unless attribs
 				
-				hash == @defines and attribs[:std] == @std.to_s and attribs[:strict] == @strict
+				hash == get_defines(file) and attribs[:std] == @std.to_s and attribs[:strict] == @strict
 			end
 			
 			def print(*values)
@@ -32,15 +52,15 @@ module Reno
 			end
 			
 			def store(file)
-				defines = file.db[self.class.table_name(:defines)]
-				attribs = file.db[self.class.table_name(:attribs)]
+				defines = file.db[self.class.table_name(:defines, C)]
+				attribs = file.db[self.class.table_name(:attribs, C)]
 				
 				# Delete existing rows				
 				defines.filter(:file => file.row[:id]).delete
 				attribs.filter(:file => file.row[:id]).delete
 				
 				# Add the current ones
-				@defines.each_pair do |key, value|
+				get_defines(file).each_pair do |key, value|
 					defines.insert(:file => file.row[:id], :define => key, :value => value)
 				end
 				
@@ -48,13 +68,13 @@ module Reno
 			end
 			
 			def self.setup_schema(cache)
-				setup_table(cache, :defines) do
+				setup_table(cache, :defines, C) do
 					Integer :file
 					String :define
 					String :value
 				end
 				
-				setup_table(cache, :attribs) do
+				setup_table(cache, :attribs, C) do
 					Integer :file
 					FalseClass :strict
 					String :std
@@ -63,6 +83,7 @@ module Reno
 			
 			def merge(other)
 				@defines.merge!(other.read(:defines))
+				@exported_defines.merge!(other.read(:exported_defines))
 				
 				other_value = other.read(:std)
 				@std = other_value if other_value
@@ -73,8 +94,12 @@ module Reno
 				@headers.concat(other.read(:headers))
 			end
 			
-			def define(name, value = nil)
+			def define(name, value = nil, *options)
 				@defines[name] = value
+			end
+			
+			def export_define(name, value = nil)
+				@exported_defines[name] = value
 			end
 			
 			def strict(value = true)
@@ -89,10 +114,8 @@ module Reno
 				headers = []
 				dependencies.each do |dependency|
 					langs = dependency.conf.get(:langs, nil).map { |langs| langs[language.name] }.reject { |lang| !lang }
-					puts language.merge(langs).read(:headers).inspect
 					language.merge(langs).read(:headers).each do |header|
 						headers << File.expand_path(header, dependency.package.base)
-						puts File.expand_path(header, dependency.package.base).inspect
 					end
 				end
 				headers

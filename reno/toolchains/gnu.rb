@@ -1,15 +1,29 @@
+require 'reno/languages/c'
+require 'reno/languages/c++'
+
 module Reno
 	module Toolchains
 		class Gnu < Toolchain
-			register :gnu, 'C'
+			register :gnu, 'C', 'C++'
 			
 			class << self	
-				def command(file = nil)
-					ENV['CC'] || 'gcc'
+				def command(*files)
+					file = files.sort_by { |file| file.language.priority }.first
+					
+					case file.lang_conf
+						when Languages::CXX
+							ENV['CXX'] || 'g++'
+						when Languages::C
+							ENV['CC'] || 'gcc'
+						else
+							raise ToolchainError, "GCC doesn't support the language #{lang.language.name}."
+					end
 				end
 				
 				def language(file)
 					case file.lang_conf
+						when Languages::CXX
+							'c++'
 						when Languages::C
 							'c'
 						else
@@ -40,7 +54,7 @@ module Reno
 				
 				def defines(file)
 					defines = []
-					file.lang_conf.read(:defines).each_pair do |key, value|
+					file.lang_conf.get_defines(file).each_pair do |key, value|
 						defines << '-D' << (value ? "#{key}=#{value}" : key.to_s)
 					end
 					defines
@@ -54,7 +68,10 @@ module Reno
 					if builder.package.type == :library && !shared_library?(builder)
 						Builder.execute('ar', 'rsc', output, *builder.objects.map { |object| object.output })
 					else
-						Builder.execute(command, '-pipe', *if shared_library?(builder); '-shared' end, *builder.dependencies.map { |dependency| dependency.output }, *builder.objects.map { |object| object.output }, '-o', output)
+						shared = if shared_library?(builder); '-shared' end
+						dependencies = builder.dependencies.map { |dependency| dependency.output }
+						objects = builder.objects.map { |object| object.output }
+						Builder.execute(command(*builder.objects), '-pipe', '-Wl,--no-demangle', *shared, *objects, *dependencies, '-o', output)
 					end
 				end
 			end

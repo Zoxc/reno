@@ -5,8 +5,7 @@ module Reno
 		
 		def self.locate(name)
 			Languages.constants.map { |lang| Languages.const_get(lang) }.each do |language|
-
-				next if language.superclass != Language
+				next unless Languages.is_language(language)
 				
 				if language.name == name
 					return language
@@ -14,6 +13,14 @@ module Reno
 			end
 			
 			raise "Unable to find the language '#{name}'."
+		end
+		
+		def self.is_language(language)
+			while language
+				language = language.superclass
+				return true if language == Languages::Language
+			end
+			nil
 		end
 	
 		class Language
@@ -39,12 +46,16 @@ module Reno
 			class << self
 				attr :name, true
 				
-				def table_name(name)
-					"lang_#{self.name}_#{name}".downcase.to_sym
+				def priority
+					0
 				end
 				
-				def setup_table(cache, name, &block)
-					cache.setup_table(table_name(name), &block)
+				def table_name(name, object = self)
+					"lang_#{object.name}_#{name}".downcase.to_sym
+				end
+				
+				def setup_table(cache, name, object = self, &block)
+					cache.setup_table(table_name(name, object), &block)
 				end
 				
 				def setup_schema(cache)

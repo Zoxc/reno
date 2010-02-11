@@ -180,7 +180,7 @@ module Reno
 		end
 		
 		def build_package(data, library)
-			PackageResult.new(self, create_conf, nil, @library)
+			PackageResult.new(self, create_conf, nil, File.expand_path(@library[:library], @base))
 		end
 	end
 	
