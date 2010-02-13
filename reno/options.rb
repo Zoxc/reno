@@ -41,6 +41,10 @@ module Reno
 			@package.dependency(Dependency.new(@package, name, options))
 		end
 		
+		def subsystem(type)
+			@package.subsystem = type
+		end
+		
 		alias :sources :source
 		
 		def default(hash)

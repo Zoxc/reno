@@ -81,6 +81,7 @@ module Reno
 		attr_reader :default, :name, :base, :output, :type
 		attr :desc, true
 		attr :version, true
+		attr :subsystem, true
 		
 		def option_factory(block)
 			PackageOption.new(self, nil, block)
@@ -192,7 +193,10 @@ module Reno
 				mutex.unlock if mutex
 			end
 			
-			PackageResult.new(self, create_conf, nil, (File.expand_path(@library[:import], @base) if @library[:import]), if @library[:system]; @library[:library] else File.expand_path(@library[:library], @base) end, library, dependencies)
+			import_library = @library[:system] ? @library[:import] : File.expand_path(@library[:import], @base) if @library[:import]
+			library_path = @library[:system] ? @library[:library] : File.expand_path(@library[:library], @base) if @library[:library]
+			
+			PackageResult.new(self, create_conf, nil, import_library, library_path, library, dependencies)
 		end
 	end
 	

@@ -73,8 +73,9 @@ module Reno
 							library = dependency.import_library || dependency.output
 							Symbol === library ? "-l#{library}" : library
 						end
+						subsystem = ["-Wl,-subsystem,#{builder.package.subsystem}"] if builder.package.subsystem && Platforms.current == Platforms::Windows
 						objects = builder.objects.map { |object| object.output }
-						Builder.execute(command(*builder.objects), '-pipe', *shared, *objects, *dependencies, '-o', output)
+						Builder.execute(command(*builder.objects), '-pipe', *subsystem, *shared, *objects, *dependencies, '-o', output)
 					end
 				end
 			end
