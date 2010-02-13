@@ -70,11 +70,8 @@ module Reno
 					else
 						shared = if shared_library?(builder); '-shared' end
 						dependencies = builder.dependencies.map do |dependency|
-							if Symbol === dependency.output
-								"-l#{dependency.output}"
-							else
-								dependency.output
-							end
+							library = dependency.import_library || dependency.output
+							Symbol === library ? "-l#{library}" : library
 						end
 						objects = builder.objects.map { |object| object.output }
 						Builder.execute(command(*builder.objects), '-pipe', *shared, *objects, *dependencies, '-o', output)

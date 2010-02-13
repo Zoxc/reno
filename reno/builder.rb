@@ -73,7 +73,18 @@ module Reno
 			@files = Lock.new([])
 			@puts_lock = Mutex.new
 			@cache =  Lock.new({})
-			@output_name = output(@package.output_name(self))
+			@output_name = output(@package.output_name(@library))
+		end
+		
+		def copy_libraries(dependencies)
+			dependencies.each do |dependency|
+				unless Symbol === dependency.output
+					if dependency.output && dependency.package.type == :library && dependency.library != :shared
+						FileUtils.copy(dependency.output, File.expand_path(File.basename(dependency.output), @bulid_base))
+					end
+					copy_libraries(dependency.dependencies)
+				end
+			end
 		end
 		
 		def run(threads = 8)
@@ -111,6 +122,8 @@ module Reno
 			else
 				puts "Nothing to do with #{@package.name}."
 			end
+			
+			copy_libraries(@dependencies)
 		end
 		
 		def get_file

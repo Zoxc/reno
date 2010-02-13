@@ -64,14 +64,16 @@ module Reno
 	end
 	
 	class PackageResult
-		attr_reader :package, :conf, :mutex, :output, :dependencies
+		attr_reader :package, :conf, :mutex, :output, :dependencies, :library, :import_library
 		
-		def initialize(package, conf, mutex, output, dependencies)
+		def initialize(package, conf, mutex, import_library, output, library, dependencies)
 			@package = package
 			@conf = conf
 			@mutex = mutex
+			@import_library = import_library
 			@output = output
 			@dependencies = dependencies
+			@library = library
 		end
 	end
 
@@ -98,7 +100,7 @@ module Reno
 			self
 		end
 		
-		def output_name(builder)
+		def output_name(library)
 			raise "You can't link packages!"
 		end
 		
@@ -140,7 +142,7 @@ module Reno
 				mutex.unlock if mutex
 			end
 			
-			PackageResult.new(self, conf, @mutex, output, dependencies)
+			PackageResult.new(self, conf, @mutex, nil, output, library, dependencies)
 		end
 		
 		def build(data = nil, library = nil)
@@ -158,20 +160,20 @@ module Reno
 			result
 		end
 		
-		def output_name(builder)
+		def output_name(library)
 			if Platforms.current == Platforms::Windows
-				@name + (builder.library == :static ? '.lib' : '.dll')
+				@name + (library == :static ? '.lib' : '.dll')
 			else
-				@name + (builder.library == :static ? '.a' : '.so')
+				@name + (library == :static ? '.a' : '.so')
 			end
 		end
 	end
 	
 	class CompiledLibraryOption < PackageOption
 		def library(library, *options)
-			hash = {:shared => false, :system => false}
+			hash = {:shared => false, :system => false, :import => nil}
 			hash.merge!(options[0]) if Hash === options[0]
-			@package.library = {:library => library, :shared => hash[:shared], :system => hash[:system]}
+			@package.library = {:library => library, :import => hash[:import], :shared => hash[:shared], :system => hash[:system]}
 		end
 	end
 	
@@ -190,12 +192,12 @@ module Reno
 				mutex.unlock if mutex
 			end
 			
-			PackageResult.new(self, create_conf, nil, if @library[:system]; @library[:library] else File.expand_path(@library[:library], @base) end, dependencies)
+			PackageResult.new(self, create_conf, nil, (File.expand_path(@library[:import], @base) if @library[:import]), if @library[:system]; @library[:library] else File.expand_path(@library[:library], @base) end, library, dependencies)
 		end
 	end
 	
 	class Application < Package
-		def output_name(builder)
+		def output_name(library)
 			if Platforms.current == Platforms::Windows
 				@name + '.exe'
 			else
