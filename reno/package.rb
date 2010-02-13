@@ -64,13 +64,14 @@ module Reno
 	end
 	
 	class PackageResult
-		attr_reader :package, :conf, :mutex, :output
+		attr_reader :package, :conf, :mutex, :output, :dependencies
 		
-		def initialize(package, conf, mutex, output)
+		def initialize(package, conf, mutex, output, dependencies)
 			@package = package
 			@conf = conf
 			@mutex = mutex
 			@output = output
+			@dependencies = dependencies
 		end
 	end
 
@@ -139,7 +140,7 @@ module Reno
 				mutex.unlock if mutex
 			end
 			
-			PackageResult.new(self, conf, @mutex, output)
+			PackageResult.new(self, conf, @mutex, output, dependencies)
 		end
 		
 		def build(data = nil, library = nil)
@@ -167,8 +168,10 @@ module Reno
 	end
 	
 	class CompiledLibraryOption < PackageOption
-		def library(library, shared = false)
-			@package.library = {:library => library, :shared => shared}
+		def library(library, *options)
+			hash = {:shared => false, :system => false}
+			hash.merge!(options[0]) if Hash === options[0]
+			@package.library = {:library => library, :shared => hash[:shared], :system => hash[:system]}
 		end
 	end
 	
@@ -180,7 +183,14 @@ module Reno
 		end
 		
 		def build_package(data, library)
-			PackageResult.new(self, create_conf, nil, File.expand_path(@library[:library], @base))
+			dependencies = @dependencies.map { |dependency|	dependency.build }
+			
+			dependencies.each do |dependency|
+				mutex = dependency.mutex
+				mutex.unlock if mutex
+			end
+			
+			PackageResult.new(self, create_conf, nil, if @library[:system]; @library[:library] else File.expand_path(@library[:library], @base) end, dependencies)
 		end
 	end
 	

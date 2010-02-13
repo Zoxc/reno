@@ -69,9 +69,15 @@ module Reno
 						Builder.execute('ar', 'rsc', output, *builder.objects.map { |object| object.output })
 					else
 						shared = if shared_library?(builder); '-shared' end
-						dependencies = builder.dependencies.map { |dependency| dependency.output }
+						dependencies = builder.dependencies.map do |dependency|
+							if Symbol === dependency.output
+								"-l#{dependency.output}"
+							else
+								dependency.output
+							end
+						end
 						objects = builder.objects.map { |object| object.output }
-						Builder.execute(command(*builder.objects), '-pipe', '-Wl,--no-demangle', *shared, *objects, *dependencies, '-o', output)
+						Builder.execute(command(*builder.objects), '-pipe', *shared, *objects, *dependencies, '-o', output)
 					end
 				end
 			end

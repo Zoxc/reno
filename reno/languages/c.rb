@@ -113,9 +113,19 @@ module Reno
 			def self.extract_headers(language, dependencies)
 				headers = []
 				dependencies.each do |dependency|
+					dependency_symbols = []
 					langs = dependency.conf.get(:langs, nil).map { |langs| langs[language.name] }.reject { |lang| !lang }
 					language.merge(langs).read(:headers).each do |header|
-						headers << File.expand_path(header, dependency.package.base)
+						if Symbol === header
+							dependency_symbols << header
+						else
+							headers << File.expand_path(header, dependency.package.base)
+						end
+					end
+					
+					unless dependency_symbols.empty?
+						dependencies = dependency.dependencies.reject { |dependency| !dependency_symbols.include?(dependency.package.name.to_sym) }
+						headers.concat(extract_headers(language, dependencies))
 					end
 				end
 				headers
