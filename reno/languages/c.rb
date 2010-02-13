@@ -95,11 +95,22 @@ module Reno
 			end
 			
 			def define(name, value = nil, *options)
-				@defines[name] = value
+				if Hash === value
+					hash = value
+					value = nil
+				else
+					hash = options.first if Hash === options.first
+				end
+				
+				@defines[name.to_s] = value
+				
+				if hash
+					@exported_defines[name.to_s] = value if hash[:public]
+				end
 			end
-			
+
 			def export_define(name, value = nil)
-				@exported_defines[name] = value
+				@exported_defines[name.to_s] = value
 			end
 			
 			def strict(value = true)
