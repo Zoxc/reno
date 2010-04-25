@@ -1,0 +1,40 @@
+Node < IComponent
+- state: Package::State, the state attached to this mode
+- a piece of data, most likely a file 
+
+IComponent
+- include_component(settings): Called when it's included in a package
+
+Module Mergable
+- include_component(settings): Called when it's included in a package
+- abstract: merge(other): Called when it's merged with another component
+
+Processor < IComponent
+
+File < Node
+- Extension < IComponent: maps a file extension to a Data type
+
+Language < IComponent
+- include_component: adds the following things the Package
+       - File::Extension < Mergable: c => Language::C for example
+       - Interface
+			- define(name, value = null): Defines a C preprocessor define which is defined on the processsed files
+
+Package
+- State: The settings for the package
+	- nodes:
+       - Dependency
+	- private data
+	- public data
+	- Interface:
+       - export(*args, &block): publish components in args and block
+       - use(*args): add a private component
+       - merge(type): merge some components into type
+       - name: sets the name for the package
+       - version: sets the version for the package
+       - o(name, &block): defines a boolean option
+
+?
+- Processor
+- Sub-Packages
+- Merging
