@@ -19,8 +19,12 @@ module Reno
 				end
 			end
 			
+			class File < Reno::File
+			end
+			
 			register :state, State
 			register :interface, Interface
+			register :ext, 'c', File
 		end
 	end
 end

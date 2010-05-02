@@ -21,12 +21,13 @@ module Reno
 		class CreationError < StandardError
 		end
 		
-		Conversions.register String do |filename, state|
-			ext = ::File.extname(filename)[1..-1]
+		Conversions.register String do |pattern, state, settings|
+			ext = ::File.extname(pattern)[1..-1]
 			exts = state.get_component(File::Extension, true)
-			file = exts ? exts[ext] : nil
-			raise CreationError, "Unable to use pattern '#{filename}', could identifiy the extension '#{ext}'" unless file
-			file.new(filename, state)
+			fileclass = exts ? exts.locate(ext) : nil
+			raise CreationError, "Unable to use pattern '#{pattern}', could identifiy the extension '#{ext}'" unless fileclass
+			files = Dir.glob(pattern)
+			files.map { |file| fileclass.new(file, settings) }
 		end
 		
 		attr_reader :filename
@@ -34,6 +35,10 @@ module Reno
 		def initialize(filename, state)
 			@filename = filename
 			super(state)
+		end
+		
+		def inspect
+			"#<Reno::File filename=#{@filename.inspect}>"
 		end
 	end
 end

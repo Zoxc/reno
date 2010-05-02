@@ -21,9 +21,9 @@ Reno::Package.new do
 	#use platform.optimizer unless o('debug') { c.define 'DEBUG' }
 
 	# files
-	use('**/*.c') { c.define 'c_files_only' => 'cool' }
-	use '**/*.yy', '**/*.asm'
-
+	use('**/*.c') { use(Languages::C).define 'c_files_only' => 'cool' }
+	# use '**/*.yy', '**/*.asm'
+	
 	#export Languages::C::Headers => 'include'
 	#export merge(platform.library)
 end.run

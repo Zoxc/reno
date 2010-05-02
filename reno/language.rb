@@ -1,12 +1,12 @@
 module Reno
 	class Language
-		def self.use_component(state)
+		def self.use_component(state, settings)
 			@lang_ext.each do |extension|
-				state.use(extension)
+				state.use(extension, settings)
 			end
 			
 			language_state = @state_class.new
-			state.use(language_state)
+			state.use(language_state, settings)
 			
 			@interface_class.new(language_state)
 		end

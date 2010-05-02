@@ -10,11 +10,15 @@ module Reno
 				@component_map = {}
 			end
 			
-			def use(component)
-				if component.respond_to?(:use_component)
-					component.use_component(self)
+			def use(component, settings)
+				unless component.respond_to?(:use_component)
+					components = [Conversions.convert(component, self, settings)].flatten
 				else
-					Conversions.convert(component, self)
+					components = [component]
+				end
+				
+				components.map do |component|
+					component.use_component(self, settings)
 				end
 			end
 			
@@ -41,6 +45,18 @@ module Reno
 					false
 				end
 			end
+			
+			def nodes(type = nil)
+				if has_component?(Node)
+					nodes = get_component(Node)
+					if type
+						nodes.reject! { |node| !(node.class <= type) }
+					end
+					nodes
+				else
+					[]
+				end
+			end
 		end
 		
 		class Interface
@@ -58,6 +74,10 @@ module Reno
 				@package.version = version
 			end
 			
+			def nodes(type = nil)
+				@state.nodes(type)
+			end
+			
 			def use(*args, &block)
 				result = []
 				
@@ -68,8 +88,10 @@ module Reno
 				end
 				
 				args.each do |component|
-					result << state.use(component)
+					result.concat(@state.use(component, state))
 				end
+				
+				result.flatten!
 				
 				if result.empty?
 					nil

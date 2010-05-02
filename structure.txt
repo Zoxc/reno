@@ -1,9 +1,9 @@
+IComponent
+- use_component(settings): Called when it's included in a package
+
 Node < IComponent
 - state: Package::State, the state attached to this mode
 - a piece of data, most likely a file 
-
-IComponent
-- use_component(settings): Called when it's included in a package
 
 Module Mergable
 - use_component(settings): Called when it's included in a package
@@ -30,7 +30,9 @@ Package
 	- Interface:
        - export(*args, &block): publish components in args and block
        - use(*args): add a private component
-       - merge(type): merge some components into type
+       - merge(nodes, using, to = nil): merge some components into 'to', or the default output of 'using'
+	   - convert(from, to): converts the nodes 'from' into type 'to'
+	   - nodes(type = nil): returns the current attached nodes, optionally of type 'type'
        - name: sets the name for the package
        - version: sets the version for the package
        - o(name, &block): defines a boolean option
