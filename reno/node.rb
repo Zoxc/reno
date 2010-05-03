@@ -1,19 +1,24 @@
 module Reno
 	class Node
-		attr_reader :state
-		
-		def initialize(state)
-			@state = state
+		class Link
+			attr_reader :processor
+			attr_reader :node
+			
+			def initialize(processor, node)
+				@processor = processor
+				@node = processor
+			end
 		end
 		
-		def use_component(state, settings)
-			if state.has_component?(Node, false)
-				existing = state.get_component(Node)
-				existing << self
-				self
+		def initialize
+			@map = {}
+		end
+		
+		def link(processor, output)
+			if @map.has_key?(output)
+				@map[output] << Link.new(processor, output)	
 			else
-				state.set_component(Node, [self])
-				self
+				@map[output] = [Link.new(processor, output)]
 			end
 		end
 	end

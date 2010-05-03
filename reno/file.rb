@@ -1,5 +1,5 @@
 module Reno
-	class File < Node
+	class File < Data
 		class Extension
 			include Mergable
 			
@@ -27,14 +27,14 @@ module Reno
 			fileclass = exts ? exts.locate(ext) : nil
 			raise CreationError, "Unable to use pattern '#{pattern}', could identifiy the extension '#{ext}'" unless fileclass
 			files = Dir.glob(pattern)
-			files.map { |file| fileclass.new(file, settings) }
+			files.map { |file| fileclass.new(file, fileclass, settings) }
 		end
 		
 		attr_reader :filename
 		
-		def initialize(filename, state)
+		def initialize(filename, node, settings)
 			@filename = filename
-			super(state)
+			super(node, settings)
 		end
 		
 		def inspect
