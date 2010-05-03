@@ -6,6 +6,7 @@ module Reno
 	end
 
 	require 'reno/conversions'
+	require 'reno/components'
 	require 'reno/stackable'
 	require 'reno/mergable'
 	require 'reno/node'

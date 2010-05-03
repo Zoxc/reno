@@ -1,60 +1,41 @@
 module Reno
 	class Package
 		class State
-			class StateComponentError < StandardError
-			end
+			attr_reader :public, :private
 			
 			def initialize(package, parent)
 				@package = package
 				@parent = parent
-				@component_map = {}
+				@components = {}
+				@public = Components.new
+				@private = Components.new
 			end
 			
-			def use(component, settings)
-				unless component.respond_to?(:use_component)
-					components = [Conversions.convert(component, self, settings)].flatten
-				else
-					components = [component]
+			def nodes(type = nil, private = true)
+				(private ? @private : @public).nodes(type)
+			end
+			
+			def use(compoonents, args, block)
+				result = []
+				
+				state = self
+				
+				if block
+					state = @package.state(state, block)
 				end
 				
-				components.map do |component|
-					component.use_component(self, settings)
+				args.each do |component|
+					result.concat(compoonents.use(component, state))
 				end
-			end
-			
-			def set_component(component, value)
-				@component_map[component] = value
-			end
-			
-			def get_component(component, silent = false)
-				if @component_map.has_key?(component)
-					@component_map[component]
-				elsif @parent
-					@parent.get_component(component, silent)
+				
+				result.flatten!
+				
+				if result.empty?
+					nil
+				elsif result.size == 1
+					result.first
 				else
-					silent ? nil : raise(StateComponentError, "Unable to find component #{component.inspect}")
-				end
-			end
-			
-			def has_component?(component, recursive = true)
-				if @component_map.has_key?(component)
-					true
-				elsif @parent && recursive
-					@parent.has_component?(component)
-				else
-					false
-				end
-			end
-			
-			def nodes(type = nil)
-				if has_component?(Node)
-					nodes = get_component(Node)
-					if type
-						nodes.reject! { |node| !(node.class <= type) }
-					end
-					nodes
-				else
-					[]
+					result
 				end
 			end
 		end
@@ -79,30 +60,11 @@ module Reno
 			end
 			
 			def use(*args, &block)
-				result = []
-				
-				state = @state
-				
-				if block
-					state = @package.state(state, block)
-				end
-				
-				args.each do |component|
-					result.concat(@state.use(component, state))
-				end
-				
-				result.flatten!
-				
-				if result.empty?
-					nil
-				elsif result.size == 1
-					result.first
-				else
-					result
-				end
+				@state.use(@state.private, args, block)
 			end
 			
-			def export(*args)
+			def export(*args, &block)
+				@state.use(@state.public, args, block)
 			end
 			
 			def o(name, desc = nil)
@@ -120,7 +82,7 @@ module Reno
 		
 		def state(parent, block)
 			old_state = @interface.state
-			new_state = State.new(@package, old_state)
+			new_state = State.new(self, old_state)
 			begin
 				@interface.state = new_state
 				@interface.instance_eval(&block)
