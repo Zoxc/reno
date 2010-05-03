@@ -1,11 +1,13 @@
 require 'reno'
 
-Reno::Package.new do
+include Reno
+
+Package.new do
 	name 'libc'
 	publish 'msvcrt.dll'
 end
 
-Reno::Package.new do
+Package.new do
 	# name and version
 	name 'library'
 	version '0.2'
@@ -21,7 +23,7 @@ Reno::Package.new do
 	#use platform.optimizer unless o('debug') { c.define 'DEBUG' }
 
 	# files
-	use('**/*.c') { use(Languages::C).define 'c_files_only' => 'cool' }
+	use('**/*.c') { c.define 'c_files_only' => 'cool' }
 	# use '**/*.yy', '**/*.asm'
 	
 	#export Languages::C::Headers => 'include'
