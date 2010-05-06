@@ -1,5 +1,5 @@
 module Reno
-	class File < Data
+	class File < Node
 		class Extension
 			include Mergable
 			

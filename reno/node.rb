@@ -10,15 +10,29 @@ module Reno
 			end
 		end
 		
-		def initialize
-			@map = {}
+		def self.inherited(subclass)
+			@links = []
 		end
 		
-		def link(processor, output)
-			if @map.has_key?(output)
-				@map[output] << Link.new(processor, output)	
+		def self.link(processor, output)
+			@links << Link.new(processor, output)	
+		end
+		
+		attr_reader :state
+		
+		def initialize(node, state)
+			@node = node
+			@state = state
+		end
+		
+		def use_component(components, state)
+			if components.has_component?(Data, false)
+				existing = components.get_component(Data)
+				existing << self
+				self
 			else
-				@map[output] = [Link.new(processor, output)]
+				components.set_component(Data, [self])
+				self
 			end
 		end
 	end

@@ -10,7 +10,6 @@ module Reno
 	require 'reno/stackable'
 	require 'reno/mergable'
 	require 'reno/node'
-	require 'reno/data'
 	require 'reno/file'
 	require 'reno/package'
 	require 'reno/languages'
