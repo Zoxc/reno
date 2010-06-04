@@ -15,17 +15,17 @@ module Reno
 				(private ? @private : @public).nodes(type)
 			end
 			
-			def use(compoonents, args, block)
+			def use(components, args, block)
 				result = []
 				
 				state = self
 				
 				if block
-					state = @package.state(state, block)
+					state = @package.state_block(state, block)
 				end
 				
 				args.each do |component|
-					result.concat(compoonents.use(component, state))
+					result.concat(components.use(component, state))
 				end
 				
 				result.flatten!
@@ -41,12 +41,10 @@ module Reno
 		end
 		
 		class Interface
-			attr :state, true
-			
 			def initialize(package)
 				@package = package
 			end
-			
+
 			def name(name)
 				@package.name = name
 			end
@@ -56,15 +54,15 @@ module Reno
 			end
 			
 			def nodes(type = nil)
-				@state.nodes(type)
+				@package.state.nodes(type)
 			end
 			
 			def use(*args, &block)
-				@state.use(@state.private, args, block)
+				@package.state.use(@package.state.private, args, block)
 			end
 			
 			def export(*args, &block)
-				@state.use(@state.public, args, block)
+				@package.state.use(@package.state.public, args, block)
 			end
 			
 			def o(name, desc = nil)
@@ -73,6 +71,7 @@ module Reno
 		
 		attr :name, true
 		attr :version, true
+		attr_reader :state
 		
 		def initialize(&block)
 			@block = block
@@ -80,20 +79,20 @@ module Reno
 			@state = nil
 		end
 		
-		def state(parent, block)
-			old_state = @interface.state
+		def state_block(parent, block)
+			old_state = @state
 			new_state = State.new(self, old_state)
 			begin
-				@interface.state = new_state
+				@state = new_state
 				@interface.instance_eval(&block)
 			ensure
-				@interface.state = old_state
+				@state = old_state
 			end
 			new_state
 		end
 		
 		def run
-			state(0, @block)
+			state_block(0, @block)
 		end
 	end
 end
