@@ -1,6 +1,6 @@
 module Reno
 	module Mergable
-		def use_component(components, state)
+		def use_component(components)
 			if components.has_component?(self.class, false)
 				existing = components.get_component(self.class)
 				existing.merge(self)

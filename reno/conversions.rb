@@ -9,12 +9,12 @@ module Reno
 			@map[from] = block
 		end
 		
-		def self.convert(from, state, settings)
+		def self.convert(from, components)
 			result = @map[from.class]
-			return result.call(from, state, settings) if result
+			return result.call(from, components) if result
 			
 			@map.each_key do |key|
-				return @map[key].call(from, state, settings) if key < from.class
+				return @map[key].call(from, components) if key < from.class
 			end
 			
 			raise ConversionError, "Unable to find conversion for type '#{from.class.inspect}'"

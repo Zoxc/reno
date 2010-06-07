@@ -3,19 +3,22 @@ module Reno
 		class ComponentsError < StandardError
 		end
 		
-		def initialize
+		attr_reader :owner
+		
+		def initialize(owner)
 			@component_map = {}
+			@owner = owner
 		end
 		
-		def use(component, state)
+		def use(component)
 			unless component.respond_to?(:use_component)
-				components = [Conversions.convert(component, self, state)].flatten
+				components = [Conversions.convert(component, self)].flatten
 			else
 				components = [component]
 			end
 			
 			components.map do |component|
-				component.use_component(self, state)
+				component.use_component(self)
 			end
 		end
 		

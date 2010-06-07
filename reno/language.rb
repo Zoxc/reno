@@ -1,14 +1,36 @@
 module Reno
 	class Language
-		def self.use_component(components, state)
-			@lang_ext.each do |extension|
-				components.use(extension, state)
+		class DeferedState
+			def initialize(components, state_class)
+				state = components.owner
+				@package = state.package
+				@private = components == state.private
+				@state_class = state_class
 			end
 			
-			language_state = @state_class.new
-			components.use(language_state, state)
+			def get_components
+				@private ? @package.state.private : @package.state.public
+			end
 			
-			@interface_class.new(language_state)
+			def get
+				components = get_components
+				
+				if components.has_component?(@state_class, false)
+					components.get_component(@state_class)
+				else
+					state = @state_class.new
+					components.use(state)
+					state
+				end
+			end
+		end
+		
+		def self.use_component(components)
+			@lang_ext.each do |extension|
+				components.use(extension)
+			end
+			
+			@interface_class.new(DeferedState.new(components, @state_class))
 		end
 		
 		def self.register(type, *args)

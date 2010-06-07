@@ -1,14 +1,14 @@
 module Reno
 	class Package
 		class State
-			attr_reader :public, :private
+			attr_reader :public, :private, :package
 			
 			def initialize(package, parent)
 				@package = package
 				@parent = parent
 				@components = {}
-				@public = Components.new
-				@private = Components.new
+				@public = Components.new(self)
+				@private = Components.new(self)
 			end
 			
 			def nodes(type = nil, private = true)
@@ -18,14 +18,10 @@ module Reno
 			def use(components, args, block)
 				result = []
 				
-				state = self
-				
-				if block
-					state = @package.state_block(state, block)
-				end
-				
-				args.each do |component|
-					result.concat(components.use(component, state))
+				@package.state_block(block) do
+					args.each do |component|
+						result.concat(components.use(component))
+					end
 				end
 				
 				result.flatten!
@@ -79,20 +75,25 @@ module Reno
 			@state = nil
 		end
 		
-		def state_block(parent, block)
-			old_state = @state
-			new_state = State.new(self, old_state)
-			begin
-				@state = new_state
-				@interface.instance_eval(&block)
-			ensure
-				@state = old_state
+		def state_block(block)
+			if block
+				old_state = @state
+				new_state = State.new(self, old_state)
+				begin
+					@state = new_state
+					@interface.instance_eval(&block)
+					yield
+				ensure
+					@state = old_state
+				end
+				new_state
+			else
+				yield
 			end
-			new_state
 		end
 		
 		def run
-			state_block(0, @block)
+			state_block(@block) {}
 		end
 	end
 end

@@ -20,12 +20,11 @@ module Reno
 		
 		attr_reader :state
 		
-		def initialize(node, state)
-			@node = node
-			@state = state
+		def initialize(components)
+			@state = components.owner
 		end
 		
-		def use_component(components, state)
+		def use_component(components)
 			if components.has_component?(Data, false)
 				existing = components.get_component(Data)
 				existing << self
