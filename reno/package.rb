@@ -63,6 +63,14 @@ module Reno
 			
 			def o(name, desc = nil)
 			end
+			
+			def merge(nodes, using)
+				@package.merge(nodes, using)
+			end
+			
+			def platform
+				Platform.new
+			end
 		end
 		
 		attr :name, true
@@ -90,6 +98,25 @@ module Reno
 			else
 				yield
 			end
+		end
+		
+		def merge(nodes, using)
+			mergers = using.mergers
+			processor = nil
+			if mergers
+				usable_mergers = []
+				mergers.each do |merger|
+					puts "testing merger #{merger}"
+					next unless @state.private.has_component?(merger, true)
+					merge_state = merger.start_merge(nodes, using)
+					next unless merge_state
+					usable_mergers << {merger: merger, steps: merger.merge_steps(nodes, using), state: merge_state}
+				end
+				processor = usable_mergers.min { |merger| merger[:steps] } [:merger]
+			end
+			
+			raise "Unable to find a merger for #{using}." unless processor
+			puts processor.inspect
 		end
 		
 		def run
