@@ -29,10 +29,10 @@ module Reno
 		end
 		
 		def inspect
-			"#<Reno::File filename=#{@filename.inspect}>"
+			"#<#{self.class} filename=#{@filename.inspect}>"
 		end
 	end
-		
+	
 	Conversions.register String do |pattern, components|
 		ext = ::File.extname(pattern)[1..-1]
 		exts = components.get_component(File::Extension, true)

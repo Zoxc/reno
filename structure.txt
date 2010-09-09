@@ -54,3 +54,4 @@ Package < IComponent, Stackable
 - Processor
 - Sub-Packages
 - Merging
+- Able to generate dependencies for all files without executing actions

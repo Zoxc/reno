@@ -13,6 +13,10 @@ module Reno
 				def self.use_component(components)
 					super
 				end
+				
+				def self.eval_merge(nodes, target)
+					eval_merge_simple(nodes, ObjectFile, target)
+				end
 			end
 			
 			Linker.merger Executable, SharedLibrary, StaticLibrary

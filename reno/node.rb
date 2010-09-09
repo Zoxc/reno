@@ -6,7 +6,7 @@ module Reno
 			
 			def initialize(processor, node)
 				@processor = processor
-				@node = processor
+				@node = node
 			end
 		end
 		
@@ -27,15 +27,15 @@ module Reno
 			@mergers
 		end
 		
-		def self.link(processor, output)
-			@links << Link.new(processor, output)
+		def self.link(processor, node)
+			@links << Link.new(processor, node)
 		end
 		
 		def self.merger(processor)
 			@mergers << processor
 		end
 		
-		def self.search(state, visited, stack, target, results)
+		def self.search(visited, stack, target, results)
 			if self == target
 				results << stack.dup
 				return
@@ -43,18 +43,17 @@ module Reno
 			
 			return if visited.has_key?(self)
 			visited[self] = true
-			return if state
 			
 			@links.each do |link|
 				stack << link
-				link.output.search(visited, stack, target, results)
+				link.node.search(visited, stack, target, results)
 				stack.pop
 			end
 		end
 		
-		def self.path(state, target)
+		def self.path(target)
 			results = []
-			search(state, {}, [], target, results)
+			search({}, [], target, results)
 			result = results.min { |result| result.size }
 		end
 		
@@ -65,12 +64,12 @@ module Reno
 		end
 		
 		def use_component(components)
-			if components.has_component?(Data, false)
-				existing = components.get_component(Data)
+			if components.has_component?(Node, false)
+				existing = components.get_component(self.class)
 				existing << self
 				self
 			else
-				components.set_component(Data, [self])
+				components.set_component(Node, [self])
 				self
 			end
 		end

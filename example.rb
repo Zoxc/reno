@@ -1,4 +1,4 @@
-require 'reno'
+require_relative 'reno'
 
 include Reno
 
@@ -11,6 +11,7 @@ Package.new do
 	# name and version
 	name 'library'
 	version '0.2'
+	use Toolchain::GNU
 	
 	# dependencies
 	#use 'libc' => Package
@@ -25,7 +26,8 @@ Package.new do
 	# files
 	use('**/*.c') { c.define 'c_files_only' => 'cool' }
 	# use '**/*.yy', '**/*.asm'
-	
+	puts nodes.inspect
 	#export Languages::C::Headers => 'include'
-	#export merge(platform.library)
+	convert(nodes, ObjectFile)
+	#export merge(nodes, SharedLibrary)
 end.run

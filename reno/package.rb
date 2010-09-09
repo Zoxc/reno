@@ -100,22 +100,21 @@ module Reno
 			end
 		end
 		
-		def merge(nodes, using)
-			mergers = using.mergers
+		def merge(nodes, target)
+			mergers = target.mergers
 			processor = nil
 			if mergers
-				usable_mergers = []
+				merge_actions = []
 				mergers.each do |merger|
-					puts "testing merger #{merger}"
 					next unless @state.private.has_component?(merger, true)
-					merge_state = merger.start_merge(nodes, using)
-					next unless merge_state
-					usable_mergers << {merger: merger, steps: merger.merge_steps(nodes, using), state: merge_state}
+					merge_action = merger.eval_merge(nodes, target)
+					next unless merge_action
+					merge_actions << merge_action
 				end
-				processor = usable_mergers.min { |merger| merger[:steps] } [:merger]
+				processor = merge_actions.find_all.min
 			end
 			
-			raise "Unable to find a merger for #{using}." unless processor
+			raise "Unable to find a merger for #{target}." unless processor
 			puts processor.inspect
 		end
 		
