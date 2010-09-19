@@ -1,7 +1,7 @@
 module Reno
 	class Processor
-		def self.use_component(components)
-			components.set_component(self, self) unless components.has_component?(self, false)
+		def self.use_component(package)
+			package.state.set_processor(self, true)
 		end
 		
 		def self.link(links)
@@ -42,15 +42,15 @@ module Reno
 			end
 			
 			def steps
-				@steps ||= paths.reduce { |sum, path| sum + path.size }
+				@steps ||= paths.reduce { |sum, path| sum + path.steps }
 			end
 		end
 		
 		def self.eval_nodes(nodes, allowed)
 			paths = nodes.map do |node|
 				path = allowed.map do |target|
-					node.class.path(target)
-				end.find_all.min { |path| path.size }
+					node.path(target)
+				end.find_all.min { |path| path.steps }
 				return nil unless path
 				path
 			end

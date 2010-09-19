@@ -1,28 +1,22 @@
 module Reno
 	module Languages
 		class C < Language
-			class State
-				include Mergable
-				
-				def merge(other)
-				end
-			end
+			Standard = Option.new
+			Defines = HashOption.new
 			
-			class Interface
-				def initialize(state)
-				end
-				
+			class Interface < Reno::Interface
 				def std(std)
+					state.set_option Standard, std
 				end
 				
 				def define(name, value = nil)
+					state.set_option Defines, {name => value}
 				end
 			end
 			
 			class File < Reno::File
 			end
 			
-			register :state, State
 			register :interface, Interface
 			register :ext, 'c', File
 		end

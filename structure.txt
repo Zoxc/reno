@@ -55,3 +55,8 @@ Package < IComponent, Stackable
 - Sub-Packages
 - Merging
 - Able to generate dependencies for all files without executing actions
+- store cached files with a hash tree
+- processors select which configuration options to hash, combine it with the input file
+- configuration options should have a standard interface ("Option" class?), then configurations are a hash of "Option"s and value
+- merge State and Components and handle public things differently?
+- add an Collection class for nodes and remove nodes from State/Components

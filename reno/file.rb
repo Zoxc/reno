@@ -1,44 +1,36 @@
 module Reno
 	class File < Node
-		class Extension
-			include Mergable
-			
-			attr_reader :map
-			
-			def initialize(ext, file)
-				@map = {ext => file}
-			end
-			
-			def locate(ext)
-				@map[ext]
-			end
-			
-			def merge(other)
-				@map.merge!(other.map)
-			end
-		end
+		Extension = HashOption.new
 		
 		class CreationError < StandardError
 		end
 		
+		def self.register(type, *args)
+			case type
+				when :ext
+					ext = args[0]
+					@ext = ext
+			end
+		end
+		
+		def self.ext
+			@ext
+		end
+		
 		attr_reader :filename
 		
-		def initialize(filename, components)
+		def initialize(filename, state, digest = nil)
 			@filename = filename
-			super(components)
+			@digest = digest
+			super(state)
+		end
+		
+		def digest
+			@digest ||= Digest.from_file(@filename).update_node(self.class)
 		end
 		
 		def inspect
 			"#<#{self.class} filename=#{@filename.inspect}>"
 		end
-	end
-	
-	Conversions.register String do |pattern, components|
-		ext = ::File.extname(pattern)[1..-1]
-		exts = components.get_component(File::Extension, true)
-		fileclass = exts ? exts.locate(ext) : nil
-		raise CreationError, "Unable to use pattern '#{pattern}', could identifiy the extension '#{ext}'" unless fileclass
-		files = Dir.glob(pattern)
-		files.map { |file| fileclass.new(file, components) }
 	end
 end

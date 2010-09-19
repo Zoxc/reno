@@ -10,6 +10,30 @@ module Reno
 			end
 		end
 		
+		class Path
+			def initialize(node, path)
+				@node = node
+				@path = path
+			end
+			
+			def steps
+				@path.size
+			end
+			
+			def follow
+				node = @node
+				@path.each do |link|
+					node = link.processor.convert(node, link.node)
+					raise "Link #{link.processor} => #{link.node} resulted in #{node.class}" if node.class != link.node
+				end
+				node
+			end
+		end
+		
+		def self.node_name
+			name.downcase.sub('::', '.')
+		end
+		
 		def self.setup_subclass
 			@links = []
 			@mergers = []
@@ -35,7 +59,7 @@ module Reno
 			@mergers << processor
 		end
 		
-		def self.search(visited, stack, target, results)
+		def self.search(state, visited, stack, target, results)
 			if self == target
 				results << stack.dup
 				return
@@ -45,22 +69,32 @@ module Reno
 			visited[self] = true
 			
 			@links.each do |link|
+				next unless state.get_processor(link.processor)
 				stack << link
-				link.node.search(visited, stack, target, results)
+				link.node.search(state, visited, stack, target, results)
 				stack.pop
 			end
 		end
 		
-		def self.path(target)
+		def self.path(state, target)
 			results = []
-			search({}, [], target, results)
+			search(state, {}, [], target, results)
 			result = results.min { |result| result.size }
 		end
 		
 		attr_reader :state
 		
-		def initialize(components)
-			@state = components.owner
+		def initialize(state)
+			@state = state
+		end
+		
+		def cache(target, &block)
+			@state.package.cache.cache(self, target, &block)
+		end
+		
+		def path(target)
+			result = self.class.path(@state, target)
+			result ? Path.new(self, result) : nil
 		end
 		
 		def use_component(components)

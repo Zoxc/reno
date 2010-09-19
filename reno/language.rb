@@ -25,28 +25,24 @@ module Reno
 			end
 		end
 		
-		def self.use_component(components)
-			@lang_ext.each do |extension|
-				components.use(extension)
-			end
-			
-			@interface_class.new(DeferedState.new(components, @state_class))
+		def self.use_component(package)
+			package.state.set_option File::Extension, @lang_ext
+			@interface_class.new(package)
 		end
 		
 		def self.register(type, *args)
 			case type
 				when :ext
 					ext, file = *args
-					@lang_ext.push(File::Extension.new(ext, file))
-				when :state
-					@state_class = args.first
+					@lang_ext[ext] = file
+					file.register :ext, ext
 				when :interface
 					@interface_class = args.first
 			end
 		end
 		
 		def self.inherited(language)
-			language.instance_variable_set(:@lang_ext, [])
+			language.instance_variable_set(:@lang_ext, {})
 		end
 	end
 end

@@ -24,10 +24,9 @@ Package.new do
 	#use platform.optimizer unless o('debug') { c.define 'DEBUG' }
 
 	# files
-	use('**/*.c') { c.define 'c_files_only' => 'cool' }
-	# use '**/*.yy', '**/*.asm'
-	puts nodes.inspect
+	files = collect('**/*.c') { c.define 'c_files_only' => 'cool' }
+	
+	#files.merge(SharedLibrary)
 	#export Languages::C::Headers => 'include'
-	convert(nodes, ObjectFile)
-	#export merge(nodes, SharedLibrary)
+	files.convert(ObjectFile)
 end.run
