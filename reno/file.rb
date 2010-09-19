@@ -13,8 +13,8 @@ module Reno
 			end
 		end
 		
-		def self.ext
-			@ext
+		def self.ext(dot = true)
+			dot ? (@ext ? ".#{@ext}" : "") : @ext 
 		end
 		
 		attr_reader :filename
@@ -23,6 +23,11 @@ module Reno
 			@filename = filename
 			@digest = digest
 			super(state)
+		end
+		
+		def copy(path)
+			Builder.readypath(path)
+			FileUtils.copy(@filename, path)
 		end
 		
 		def digest

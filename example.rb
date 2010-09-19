@@ -9,7 +9,7 @@ end
 
 Package.new do
 	# name and version
-	name 'library'
+	name 'application'
 	version '0.2'
 	use Toolchain::GNU
 	
@@ -24,9 +24,9 @@ Package.new do
 	#use platform.optimizer unless o('debug') { c.define 'DEBUG' }
 
 	# files
-	files = collect('**/*.c') { c.define 'c_files_only' => 'cool' }
+	files = collect('**/*.c') { c.define 'this_block_only' => 'cool' }
 	
-	#files.merge(SharedLibrary)
+	files.merge(Executable).name(name)
 	#export Languages::C::Headers => 'include'
-	files.convert(ObjectFile)
+	#files.convert(ObjectFile)
 end.run

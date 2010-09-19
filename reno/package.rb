@@ -1,8 +1,8 @@
 module Reno
 	class Package
 		class Interface < Reno::Interface
-			def name(name)
-				package.name = name
+			def name(name = nil)
+				name ? package.name = name : package.name
 			end
 			
 			def version(version)

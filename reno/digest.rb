@@ -4,6 +4,8 @@ module Reno
 			new.from_file(file)
 		end
 		
+		attr_reader :digest
+		
 		def initialize
 			@digest = ::Digest::SHA2.new(512)
 		end
@@ -20,6 +22,11 @@ module Reno
 		
 		def update_node(node)
 			@digest << node.node_name
+			self
+		end
+		
+		def update_digest(digest)
+			@digest << digest.to_hex
 			self
 		end
 		

@@ -22,9 +22,9 @@ module Reno
 			@targets.include?(target)
 		end
 		
-		def self.eval_merge_simple(nodes, target, merge_target)
+		def self.eval_merge_simple(collection, target, merge_target)
 			return nil unless merges?(merge_target)
-			eval_nodes(nodes, [target])
+			eval_nodes(collection, [target], merge_target)
 		end
 		
 		class MergeAction
@@ -32,9 +32,11 @@ module Reno
 
 			attr_reader :merger, :paths
 			
-			def initialize(merger, paths)
+			def initialize(merger, package, paths, target)
 				@merger = merger
+				@package = package
 				@paths = paths
+				@target = target
 			end
 			
 			def <=>(other)
@@ -42,19 +44,25 @@ module Reno
 			end
 			
 			def steps
-				@steps ||= paths.reduce { |sum, path| sum + path.steps }
+				@steps ||= @paths.reduce { |sum, path| sum + path.steps }
+			end
+			
+			def run
+				collection = Collection.new(@package)
+				collection.nodes.concat(@paths.map { |path| path.follow })
+				@merger.merge(collection, @target)
 			end
 		end
 		
-		def self.eval_nodes(nodes, allowed)
-			paths = nodes.map do |node|
+		def self.eval_nodes(collection, allowed, merge_target)
+			paths = collection.nodes.map do |node|
 				path = allowed.map do |target|
 					node.path(target)
 				end.find_all.min { |path| path.steps }
 				return nil unless path
 				path
 			end
-			MergeAction.new(self, paths)
+			MergeAction.new(self, collection.package, paths, merge_target)
 		end
 	end
 end
