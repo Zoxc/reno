@@ -31,7 +31,7 @@ module Reno
 				def self.merge(collection, target)
 					collection.cache(target, Options,) do |output, option_map|
 						shared = if target == SharedLibrary; '-shared' end
-						Builder.execute "#{option_map[Prefix]}ld", '-pipe', *shared, *collection.nodes.map { |node| node.filename }, '-o', output
+						Builder.execute "#{option_map[Prefix]}ld", *shared, *collection.nodes.map { |node| node.filename }, '-o', output
 					end
 				end
 			end
