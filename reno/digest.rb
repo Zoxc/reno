@@ -31,7 +31,16 @@ module Reno
 		end
 		
 		def update(data)
-			@digest << data
+			case data
+				when OptionMap
+					@digest << data.digest.to_hex
+				when Digest
+					@digest << data.to_hex
+				when Node
+					@digest << data.node_name
+				when String
+					@digest << data
+			end
 			self
 		end
 		

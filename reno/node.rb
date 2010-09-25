@@ -8,30 +8,69 @@ module Reno
 				@processor = processor
 				@node = node
 			end
+			
+			def process(node_instance)
+				node = @processor.convert(node_instance, @node)
+				raise "Link #{@processor} => #{@node} resulted in #{node.class}" if node.class != @node
+				node
+			end
+			
+			def search(state, path_result, target)
+				@node.search(state, path_result, target)
+			end
 		end
 		
-		class Path
-			def initialize(node, path)
-				@node = node
-				@path = path
+		class PathResult
+			attr_reader :visited, :stack, :results, :state
+			
+			def initialize(package)
+				@visited = {}
+				@stack = []
+				@results = []
+				@state = package ? package.state : nil
 			end
 			
-			def steps
-				@path.size
+			def visited?(node)
+				@visited.has_key?(node)
 			end
 			
-			def follow
-				node = @node
-				@path.each do |link|
-					node = link.processor.convert(node, link.node)
-					raise "Link #{link.processor} => #{link.node} resulted in #{node.class}" if node.class != link.node
+			def push(link)
+				@stack << link
+			end
+			
+			def pop
+				@stack.pop
+			end
+			
+			def save_stack
+				@results << @stack.dup
+			end
+			
+			def empty?
+				@results.empty?
+			end
+			
+			def visit(node)
+				@visited[node] = true
+			end
+			
+			def results
+				@results
+			end
+			
+			def result
+				@result ||= @results.min { |result| result.size }
+			end
+			
+			def follow(source_node, result_path = result)
+				result_path.reduce(source_node) do |node, link|
+					link.process(node)
 				end
-				node
 			end
 		end
 		
 		def self.node_name
-			name.downcase.sub('::', '.')
+			name.downcase.gsub('::', '.')
 		end
 		
 		def self.setup_subclass
@@ -59,27 +98,28 @@ module Reno
 			@mergers << processor
 		end
 		
-		def self.search(state, visited, stack, target, results)
+		def self.search(state, path_result, target)
 			if self == target
-				results << stack.dup
+				path_result.save_stack
 				return
 			end
 			
-			return if visited.has_key?(self)
-			visited[self] = true
+			return if path_result.visited?(self)
+			path_result.visit self
 			
 			@links.each do |link|
 				next unless state.get_processor(link.processor)
-				stack << link
-				link.node.search(state, visited, stack, target, results)
-				stack.pop
+				path_result.push link
+				link.search(state, path_result, target)
+				path_result.pop
 			end
 		end
 		
-		def self.path(state, target)
+		def self.path(package, state, target)
+			path_result = PathResult.new(package)
 			results = []
-			search(state, {}, [], target, results)
-			result = results.min { |result| result.size }
+			search(state, path_result, target)
+			path_result
 		end
 		
 		attr_reader :state
@@ -88,13 +128,13 @@ module Reno
 			@state = state
 		end
 		
-		def cache(target, &block)
-			@state.package.cache.cache(self, target, &block)
+		def cache(target, option_set = nil, &block)
+			@state.package.cache.cache(self, target, option_set, &block)
 		end
 		
-		def path(target)
-			result = self.class.path(@state, target)
-			result ? Path.new(self, result) : nil
+		def path(target, package = nil)
+			result = self.class.path(package, @state, target)
+			result.empty? ? nil : result
 		end
 		
 		def use_component(components)

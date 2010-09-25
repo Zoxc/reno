@@ -13,6 +13,10 @@ module Reno
 				package.state.nodes(type)
 			end
 			
+			def set(option, value)
+				package.state.set_option option, value
+			end
+			
 			def collect(*patterns, &block)
 				collection = Collection.new(package)
 				

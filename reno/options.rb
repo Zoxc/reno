@@ -1,6 +1,6 @@
 module Reno	
 	class Option
-		def new(value)
+		def set(value)
 			value
 		end
 		
@@ -20,6 +20,30 @@ module Reno
 		
 		def default
 			{}
+		end
+	end
+	
+	class OptionSet
+		def initialize(options)
+			@options = options
+		end
+		
+		def list
+			@options
+		end
+	end
+	
+	class OptionMap
+		def initialize(map)
+			@map = map
+		end
+		
+		def [](option)
+			@map[option]
+		end
+		
+		def digest
+			Digest.new
 		end
 	end
 end

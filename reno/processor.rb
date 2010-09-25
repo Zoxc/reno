@@ -40,16 +40,16 @@ module Reno
 			end
 			
 			def <=>(other)
-				steps <=> other.steps
+				steps <=> other.result.size
 			end
 			
 			def steps
-				@steps ||= @paths.reduce { |sum, path| sum + path.steps }
+				@steps ||= @paths.reduce { |sum, path| sum + path.result.size }
 			end
 			
 			def run
 				collection = Collection.new(@package)
-				collection.nodes.concat(@paths.map { |path| path.follow })
+				collection.nodes.concat(@paths.map { |pair| pair[:path].follow(pair[:node]) })
 				@merger.merge(collection, @target)
 			end
 		end
@@ -57,10 +57,10 @@ module Reno
 		def self.eval_nodes(collection, allowed, merge_target)
 			paths = collection.nodes.map do |node|
 				path = allowed.map do |target|
-					node.path(target)
-				end.find_all.min { |path| path.steps }
+					node.path(target, collection.package)
+				end.find_all.min { |path| path.result.size }
 				return nil unless path
-				path
+				{node: node, path: path}
 			end
 			MergeAction.new(self, collection.package, paths, merge_target)
 		end

@@ -21,8 +21,8 @@ module Reno
 			end
 		end
 		
-		def cache(target, &block)
-			@package.cache.cache_collection(self, target, &block)
+		def cache(target, option_set = nil, &block)
+			@package.cache.cache_collection(self, target, option_set, &block)
 		end
 		
 		def merge(target)
@@ -51,13 +51,14 @@ module Reno
 		end
 		
 		def convert(target)
-			@nodes.map do |node|
-				path = node.path(target)
-				raise "Unable to convert #{node} to #{target}" unless path
-				path
-			end.map do |path|
-				path.follow
+			collection = Collection.new(package)
+			nodes = @nodes.map do |node|
+				path_result = node.path(target)
+				raise "Unable to convert #{node} to #{target}" unless path_result
+				{node: node, path: path_result}
 			end
+			collection.nodes.concat(nodes.map { |pair| pair[:path].follow(pair[:node]) })
+			collection
 		end
 		
 		def name(name)

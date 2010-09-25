@@ -9,24 +9,29 @@ module Reno
 			::File.join @path, "#{target.node_name}-#{digest.to_hex}#{target.ext}"
 		end
 		
-		def cache(node, target, &block)
-			digest = node.digest.dup.update_node(target)
+		def cache(node, target, option_set = nil, &block)
+			option_map = option_set && node.state.map_options(option_set)
+			digest = node.digest.dup
+			digest.update(target)
+			digest.update(option_map)
 			filename = place(target, digest)
 			unless ::File.exists?(filename)
-				block.call(filename)
+				block.call(filename, option_map)
 			end
 			target.new(filename, node.state, digest)
 		end
 		
-		def cache_collection(collection, target, &block)
+		def cache_collection(collection, target, option_set = nil, &block)
+			option_map = option_set && collection.package.state.map_options(option_set)
 			digest = Digest.new
 			collection.nodes.each do |node|
-				digest.update_digest(node.digest)
+				digest.update(node.digest)
 			end
-			digest.update_node(target)
+			digest.update(target)
+			digest.update(option_map)
 			filename = place(target, digest)
 			unless ::File.exists?(filename)
-				block.call(filename)
+				block.call(filename, option_map)
 			end
 			target.new(filename, collection.package.state, digest)
 		end

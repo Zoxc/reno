@@ -11,6 +11,8 @@ Package.new do
 	# name and version
 	name 'application'
 	version '0.2'
+	
+	# enable toolchain
 	use Toolchain::GNU
 	
 	# dependencies

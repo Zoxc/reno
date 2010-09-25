@@ -1,4 +1,8 @@
 module Reno
+	class Assembly < File
+		register :ext, 'S'
+	end
+	
 	class ObjectFile < File
 		register :ext, 'o'
 	end
