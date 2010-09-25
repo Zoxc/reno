@@ -19,7 +19,8 @@ module Reno
 				end
 			end
 			
-			Options = OptionSet.new [Architecture]
+			Target = Option.new
+			Options = OptionSet.new [Target, Architecture]
 			
 			class Compiler < Processor
 				link BinaryBytecode => Assembly
@@ -27,7 +28,8 @@ module Reno
 				def self.convert(node, target)
 					node.cache(target, Options) do |output, option_map|
 						arch = if option_map[Architecture]; ['-march', option_map[Architecture].gsub('_', '-')] end
-						Builder.execute 'llc', *arch, node.filename, '-o', output
+						target = if option_map[Target]; ['-mtriple', option_map[Target].gsub('_', '-')] end
+						Builder.execute 'llc', *target, *arch, node.filename, '-o', output
 					end
 				end
 			end
