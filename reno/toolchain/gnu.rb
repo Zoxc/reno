@@ -24,10 +24,13 @@ module Reno
 			class Linker < Processor
 				merger [ObjectFile] => [Executable, SharedLibrary]
 				
+				Script = FileOption.new
+				
 				def self.merge(package, nodes, target)
-					package.cache_collection(nodes, target, [Prefix]) do |output, option_map|
+					package.cache_collection(nodes, target, [Prefix, Script]) do |output, option_map|
+						script = if option_map[Script]; ['-T', option_map[Script]] end
 						shared = if target == SharedLibrary; '-shared' end
-						Builder.execute "#{option_map[Prefix]}ld", *shared, *nodes.map { |node| node.filename }, '-o', output
+						Builder.execute "#{option_map[Prefix]}ld", *script, *shared, *nodes.map { |node| node.filename }, '-o', output
 					end
 				end
 			end

@@ -23,6 +23,9 @@ module Reno
 		end
 	end
 	
+	class FileOption < Option
+	end
+	
 	class OptionMap
 		def initialize(map)
 			@map = map
