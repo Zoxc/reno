@@ -2,36 +2,47 @@ module Reno
 	class Node
 		class Link
 			attr_reader :processor
-			attr_reader :node
 			
 			def initialize(processor, node)
 				@processor = processor
 				@node = node
 			end
 			
-			def process(node_instance)
-				node = @processor.convert(node_instance, @node)
-				raise "Link #{@processor} => #{@node} resulted in #{node.class}" if node.class != @node
-				node
+			def process(path_result, node_instance)
+				@processor.convert(node_instance, @node)
 			end
 			
 			def search(state, path_result, target)
 				@node.search(state, path_result, target)
 			end
+			
+			def inspect
+				"(#{@node} - #{@processor})"
+			end
+		end
+		
+		class MergeLink < Link
+			def process(package, nodes)
+				@processor.merge(package, nodes, @node)
+			end
+			
+			def search(state, path_result, target)
+				@node.search(path_result.state, path_result, target) if path_result.state
+			end
 		end
 		
 		class PathResult
-			attr_reader :visited, :stack, :results, :state
+			attr_reader :stack, :results, :state, :nodes
 			
 			def initialize(package)
-				@visited = {}
 				@stack = []
 				@results = []
 				@state = package ? package.state : nil
+				@nodes = []
 			end
 			
-			def visited?(node)
-				@visited.has_key?(node)
+			def inspect
+				"#<#{self.class}:#{self.__id__} results=#{@results.size}>"
 			end
 			
 			def push(link)
@@ -50,10 +61,6 @@ module Reno
 				@results.empty?
 			end
 			
-			def visit(node)
-				@visited[node] = true
-			end
-			
 			def results
 				@results
 			end
@@ -62,10 +69,14 @@ module Reno
 				@result ||= @results.min { |result| result.size }
 			end
 			
-			def follow(source_node, result_path = result)
+			def self.follow(source_node, result_path)
 				result_path.reduce(source_node) do |node, link|
-					link.process(node)
+					link.process(self, node)
 				end
+			end
+			
+			def follow(source_node, result_path = result)
+				PathResult.follow(source_node, result_path)
 			end
 		end
 		
@@ -86,28 +97,17 @@ module Reno
 			@links
 		end
 
-		def self.mergers
-			@mergers
-		end
-		
-		def self.link(processor, node)
-			@links << Link.new(processor, node)
-		end
-		
-		def self.merger(processor)
-			@mergers << processor
+		def self.link(link)
+			@links << link
 		end
 		
 		def self.search(state, path_result, target)
 			if self == target
 				path_result.save_stack
-				return
 			end
 			
-			return if path_result.visited?(self)
-			path_result.visit self
-			
 			@links.each do |link|
+				next if path_result.stack.include?(link)
 				next unless state.get_processor(link.processor)
 				path_result.push link
 				link.search(state, path_result, target)

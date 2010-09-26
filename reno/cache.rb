@@ -21,10 +21,10 @@ module Reno
 			target.new(filename, node.state, digest)
 		end
 		
-		def cache_collection(collection, target, option_set = nil, &block)
-			option_map = option_set && collection.package.state.map_options(option_set)
+		def cache_collection(package, nodes, target, option_set = nil, &block)
+			option_map = option_set && package.state.map_options(option_set)
 			digest = Digest.new
-			collection.nodes.each do |node|
+			nodes.each do |node|
 				digest.update(node.digest)
 			end
 			digest.update(target)
@@ -33,7 +33,7 @@ module Reno
 			unless ::File.exists?(filename)
 				block.call(filename, option_map)
 			end
-			target.new(filename, collection.package.state, digest)
+			target.new(filename, package.state, digest)
 		end
 	end
 end

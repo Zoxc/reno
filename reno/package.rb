@@ -45,6 +45,10 @@ module Reno
 			@state = nil
 		end
 		
+		def cache_collection(nodes, target, option_set = nil, &block)
+			@cache.cache_collection(self, nodes, target, option_set, &block)
+		end
+		
 		def state_block(block)
 			if block
 				old_state = @state

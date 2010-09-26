@@ -11,7 +11,7 @@ module Reno
 			
 			class Clang < Processor
 				link Languages::C::File => BinaryBytecode
-								
+				
 				def self.convert(node, target)
 					node.cache(target) do |output|
 						Builder.execute 'clang', '-emit-llvm', '-c', node.filename, '-o', output
@@ -35,15 +35,11 @@ module Reno
 			end
 			
 			class Linker < Processor
-				merger BinaryBytecode
+				merger [BinaryBytecode] => BinaryBytecode
 				
-				def self.eval_merge(collection, target)
-					eval_merge_simple(collection, BinaryBytecode, target)
-				end
-				
-				def self.merge(collection, target)
-					collection.cache(target) do |output|
-						Builder.execute 'llvm-link', *collection.nodes.map { |node| node.filename }, '-o', output
+				def self.merge(package, nodes, target)
+					package.cache_collection(nodes, target, Options) do |output, option_map|
+						Builder.execute 'llvm-link', *nodes.map { |node| node.filename }, '-o', output
 					end
 				end
 			end

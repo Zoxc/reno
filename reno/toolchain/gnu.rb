@@ -22,30 +22,22 @@ module Reno
 			end
 			
 			class Linker < Processor
-				merger Executable, SharedLibrary
+				merger [ObjectFile] => [Executable, SharedLibrary]
 				
-				def self.eval_merge(collection, target)
-					eval_merge_simple(collection, ObjectFile, target)
-				end
-				
-				def self.merge(collection, target)
-					collection.cache(target, Options,) do |output, option_map|
+				def self.merge(package, nodes, target)
+					package.cache_collection(nodes, target, Options) do |output, option_map|
 						shared = if target == SharedLibrary; '-shared' end
-						Builder.execute "#{option_map[Prefix]}ld", *shared, *collection.nodes.map { |node| node.filename }, '-o', output
+						Builder.execute "#{option_map[Prefix]}ld", *shared, *nodes.map { |node| node.filename }, '-o', output
 					end
 				end
 			end
 			
 			class Archiver < Processor
-				merger StaticLibrary
-								
-				def self.eval_merge(collection, target)
-					eval_merge_simple(collection, ObjectFile, target)
-				end
+				merger [ObjectFile] => StaticLibrary
 				
-				def self.merge(collection, target)
-					collection.cache(target, Options) do |output, option_map|
-						Builder.execute("#{option_map[Prefix]}ar", 'rsc', output, *collection.nodes.map { |node| node.filename })
+				def self.merge(package, nodes, target)
+					package.cache_collection(nodes, target, Options) do |output, option_map|
+						Builder.execute("#{option_map[Prefix]}ar", 'rsc', output, *nodes.map { |node| node.filename })
 					end
 				end
 			end
