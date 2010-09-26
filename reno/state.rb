@@ -53,7 +53,7 @@ module Reno
 		
 		def map_options(option_set)
 			option_hash = {}
-			option_set.list.each do |option|
+			option_set.each do |option|
 				option_hash[option] = option.default
 			end
 			apply_options(option_hash)

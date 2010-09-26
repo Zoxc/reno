@@ -20,13 +20,12 @@ module Reno
 			end
 			
 			Target = Option.new
-			Options = OptionSet.new [Target, Architecture]
 			
 			class Compiler < Processor
 				link BinaryBytecode => Assembly
 				
 				def self.convert(node, target)
-					node.cache(target, Options) do |output, option_map|
+					node.cache(target, [Target, Architecture]) do |output, option_map|
 						arch = if option_map[Architecture]; ['-march', option_map[Architecture].gsub('_', '-')] end
 						target = if option_map[Target]; ['-mtriple', option_map[Target].gsub('_', '-')] end
 						Builder.execute 'llc', *target, *arch, node.filename, '-o', output
@@ -38,7 +37,7 @@ module Reno
 				merger [BinaryBytecode] => BinaryBytecode
 				
 				def self.merge(package, nodes, target)
-					package.cache_collection(nodes, target, Options) do |output, option_map|
+					package.cache_collection(nodes, target) do |output|
 						Builder.execute 'llvm-link', *nodes.map { |node| node.filename }, '-o', output
 					end
 				end

@@ -23,16 +23,6 @@ module Reno
 		end
 	end
 	
-	class OptionSet
-		def initialize(options)
-			@options = options
-		end
-		
-		def list
-			@options
-		end
-	end
-	
 	class OptionMap
 		def initialize(map)
 			@map = map

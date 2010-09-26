@@ -5,7 +5,7 @@ module Reno
 				link Assembly => ObjectFile
 				
 				def self.convert(node, target)
-					node.cache(target, Options) do |output, option_map|
+					node.cache(target, [Prefix]) do |output, option_map|
 						Builder.execute "#{option_map[Prefix]}as", node.filename, '-o', output
 					end
 				end
@@ -15,7 +15,7 @@ module Reno
 				link Languages::C::File => ObjectFile
 				
 				def self.convert(node, target)
-					node.cache(target, Options) do |output, option_map|
+					node.cache(target, [Prefix]) do |output, option_map|
 						Builder.execute "#{option_map[Prefix]}gcc", '-x', 'c', '-pipe', '-c', node.filename, '-o', output
 					end
 				end
@@ -25,7 +25,7 @@ module Reno
 				merger [ObjectFile] => [Executable, SharedLibrary]
 				
 				def self.merge(package, nodes, target)
-					package.cache_collection(nodes, target, Options) do |output, option_map|
+					package.cache_collection(nodes, target, [Prefix]) do |output, option_map|
 						shared = if target == SharedLibrary; '-shared' end
 						Builder.execute "#{option_map[Prefix]}ld", *shared, *nodes.map { |node| node.filename }, '-o', output
 					end
@@ -36,17 +36,16 @@ module Reno
 				merger [ObjectFile] => StaticLibrary
 				
 				def self.merge(package, nodes, target)
-					package.cache_collection(nodes, target, Options) do |output, option_map|
+					package.cache_collection(nodes, target, [Prefix]) do |output, option_map|
 						Builder.execute("#{option_map[Prefix]}ar", 'rsc', output, *nodes.map { |node| node.filename })
 					end
 				end
 			end
 			
 			Prefix = Option.new
-			Options = OptionSet.new [Prefix, Architecture]
 			
 			def self.locate(package, name)
-				options = package.state.map_options(Options)
+				options = package.state.map_options [Prefix]
 				Builder.capture "#{options[Prefix]}#{name}", '--version'
 				true
 			rescue Errno::ENOENT
