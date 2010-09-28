@@ -22,11 +22,12 @@ module Reno
 			nil
 		end
 		
-		attr_reader :filename
+		attr_reader :filename, :origin
 		
-		def initialize(filename, state, digest = nil)
+		def initialize(filename, state, digest = nil, origin = filename)
 			@filename = filename
 			@digest = digest
+			@origin = origin
 			super(state)
 		end
 		

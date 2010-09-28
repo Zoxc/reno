@@ -1,5 +1,6 @@
 require 'digest/sha2'
 require 'fileutils'
+require 'sequel'
 
 module Reno
 	ROOT = File.dirname(File.expand_path(__FILE__)) unless defined?(Reno::ROOT)

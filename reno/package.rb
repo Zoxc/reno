@@ -69,6 +69,7 @@ module Reno
 		def run
 			@cache = Cache.new('cache')
 			state_block(@block) {}
+			@cache.purge
 		ensure
 			@cache = nil
 		end
