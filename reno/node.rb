@@ -136,16 +136,5 @@ module Reno
 			result = self.class.path(package, @state, target)
 			result.empty? ? nil : result
 		end
-		
-		def use_component(components)
-			if components.has_component?(Node, false)
-				existing = components.get_component(self.class)
-				existing << self
-				self
-			else
-				components.set_component(Node, [self])
-				self
-			end
-		end
 	end
 end
