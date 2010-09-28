@@ -25,12 +25,14 @@ module Reno
 				merger [ObjectFile] => [Executable, SharedLibrary]
 				
 				Script = FileOption.new
+				PageSize = Option.new
 				
 				def self.merge(package, nodes, target)
-					package.cache_collection(nodes, target, [Prefix, Script]) do |output, option_map|
+					package.cache_collection(nodes, target, [Prefix, Script, PageSize]) do |output, option_map|
 						script = if option_map[Script]; ['-T', option_map[Script]] end
+						page_size = if option_map[PageSize]; ['-z', "max-page-size=#{option_map[PageSize]}"] end
 						shared = if target == SharedLibrary; '-shared' end
-						Builder.execute "#{option_map[Prefix]}ld", *script, *shared, *nodes.map { |node| node.filename }, '-o', output
+						Builder.execute "#{option_map[Prefix]}ld", *script, *page_size, *shared, *nodes.map { |node| node.filename }, '-o', output
 					end
 				end
 			end
