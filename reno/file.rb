@@ -28,6 +28,7 @@ module Reno
 		def copy(path)
 			Builder.readypath(path)
 			FileUtils.copy(@filename, path)
+			self.class.new(path, @state, @digest)
 		end
 		
 		def digest

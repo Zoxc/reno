@@ -183,6 +183,8 @@ module Reno
 					verify_combination?(combination)
 				end
 				
+				raise "Unable to merge #{@nodes.map { |node| node.class.name }.uniq.join(', ')} to #{target}" if combinations.empty?
+				
 				trees = combinations.map do |combination|
 					size = combination.max { |path| path.size }.size
 					zipped = combination.zip(paths)
@@ -205,8 +207,15 @@ module Reno
 			self
 		end
 		
+		def +(other)
+			collection = Collection.new(@package)
+			collection.nodes.concat(@nodes)
+			collection.nodes.concat(other.nodes)
+			collection
+		end
+		
 		def convert(target)
-			collection = Collection.new(package)
+			collection = Collection.new(@package)
 			nodes = @nodes.map do |node|
 				path_result = node.path(target)
 				raise "Unable to convert #{node} to #{target}" unless path_result
@@ -216,14 +225,16 @@ module Reno
 			collection
 		end
 		
-		def name(name)
+		def name(name, ext = true)
+			collection = Collection.new(@package)
 			if @nodes.size == 1
-				@nodes.first.copy "#{name}#{@nodes.first.class.ext}"
+				collection << @nodes.first.copy("#{name}#{if ext; @nodes.first.class.ext end}")
 			else
 				@nodes.each_with_index do |node, index|
-					node.copy "#{name}-#{index + 1}#{node.class.ext}"
+					collection << node.copy("#{name}-#{index + 1}#{if ext; node.class.ext end}")
 				end
 			end
+			collection
 		end
 		
 		def inspect
