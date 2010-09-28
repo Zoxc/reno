@@ -86,8 +86,7 @@ module Reno
 				block.call(final)
 				
 				# the next step should not be executed if the generation failed
-				puts "adding the file '#{result}' to the database"
-				
+
 				# insert the entry into the database
 				@cached.insert(hash)
 			end
