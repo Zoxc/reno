@@ -54,7 +54,7 @@ module Reno
 			@cached[id: entry[:id]] = {attempt: attempt, path: new_path}
 		end
 		
-		def place(path, target, digest)
+		def place(path, target, digest, &block)
 			# make a filename for this file
 			result = "#{path}#{target.ext}"
 			result = '_' + result if result == Database
@@ -70,21 +70,29 @@ module Reno
 			# make sure the filename is free
 			free_path(result, entry ? entry[:id] : nil)
 			
+			# build the final path and create required directories
+			final = Builder.readypath(::File.join(@path, result))
+			
 			if entry
 				# rename the existing file if it doesn't match with our result
 				if result != entry[:path]
-					::File.rename(::File.join(@path, entry[:path]), ::File.join(@path, result))
+					::File.rename(::File.join(@path, entry[:path]), final)
 				end
 				
 				# update the database with the new filename and session
 				@cached[id: entry[:id]] = hash;
 			else
+				# generate the new file
+				block.call(final)
+				
+				# the next step should not be executed if the generation failed
+				puts "adding the file '#{result}' to the database"
+				
 				# insert the entry into the database
 				@cached.insert(hash)
 			end
 			
-			# build the final path and create required directories
-			Builder.readypath(::File.join(@path, result))
+			final
 		end
 		
 		def purge
@@ -99,8 +107,7 @@ module Reno
 			digest = node.digest.dup
 			digest.update(target)
 			digest.update(option_map)
-			filename = place(node.origin, target, digest)
-			unless ::File.exists?(filename)
+			filename = place(node.origin, target, digest) do |filename|
 				block.call(filename, option_map)
 			end
 			target.new(filename, node.state, digest, node.origin)
@@ -114,8 +121,7 @@ module Reno
 			end
 			digest.update(target)
 			digest.update(option_map)
-			filename = place(target.node_name, target, digest)
-			unless ::File.exists?(filename)
+			filename = place(target.node_name, target, digest) do |filename|
 				block.call(filename, option_map)
 			end
 			target.new(filename, package.state, digest)
