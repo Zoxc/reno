@@ -216,6 +216,18 @@ module Reno
 			collection
 		end
 		
+		def &(other)
+			collection = Collection.new(@package)
+			collection.nodes.concat(@nodes)
+			
+			other.nodes.each do |node|
+				next if @nodes.find { |local| local.filename == node.filename }
+				collection.nodes << node
+			end
+			
+			collection
+		end
+		
 		def convert(target)
 			collection = Collection.new(@package)
 			nodes = @nodes.map do |node|
