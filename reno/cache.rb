@@ -3,6 +3,7 @@ module Reno
 		Database = 'cache.db'
 		def initialize(path)
 			@path = path
+			Builder.readydir(path)
 			db_path = ::File.join(path, Database)
 			new_db = !::File.exists?(db_path)
 			@db = Sequel.sqlite(:database => db_path)
@@ -25,7 +26,6 @@ module Reno
 			sessions.insert(id: 0) if new_db
 			@session = sessions.first[:id] + 1
 			sessions.update(id: @session)
-			Builder.readydir(path)
 		end
 		
 		def free_path(free_path, free_id)
