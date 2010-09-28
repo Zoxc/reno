@@ -12,7 +12,6 @@ module Reno
 		
 		def collect(*patterns)
 			exts = @package.state.get_option File::Extension
-			puts exts.inspect
 			patterns.each do |pattern|
 				files = Dir.glob(pattern)
 				files.each do |file|
