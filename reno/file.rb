@@ -17,6 +17,11 @@ module Reno
 			dot ? (@ext ? ".#{@ext}" : "") : @ext 
 		end
 		
+		def self.use_component(package)
+			package.state.set_option File::Extension, {@ext => self} if @ext
+			nil
+		end
+		
 		attr_reader :filename
 		
 		def initialize(filename, state, digest = nil)
