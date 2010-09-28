@@ -11,13 +11,16 @@ module Reno
 		end
 		
 		def collect(*patterns)
+			exts = @package.state.get_option File::Extension
+			puts exts.inspect
 			patterns.each do |pattern|
-				ext = ::File.extname(pattern)[1..-1]
-				exts = @package.state.get_option File::Extension
-				fileclass = exts[ext.downcase]
-				raise CollectionError, "Unable to use pattern '#{pattern}', could not identifiy the extension '#{ext}'" unless fileclass
 				files = Dir.glob(pattern)
-				@nodes.concat(files.map { |file| fileclass.new(file, @package.state) })
+				files.each do |file|
+					ext = ::File.extname(file)[1..-1]
+					fileclass = exts[ext]
+					raise CollectionError, "Unable to collect file '#{file}', could not identifiy the extension '#{ext}'" unless fileclass
+					@nodes << fileclass.new(file, @package.state)
+				end
 			end
 		end
 		
