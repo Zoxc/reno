@@ -13,10 +13,30 @@ module Reno
 			
 			class Compiler < Processor
 				link Languages::C::File => ObjectFile
+				link Languages::C::File => Assembly
 				
 				def self.convert(node, target)
-					node.cache(target, [Prefix]) do |output, option_map|
-						Builder.execute "#{option_map[Prefix]}gcc", '-x', 'c', '-pipe', '-c', node.filename, '-o', output
+					node.cache(target, [Prefix, Architecture]) do |output, option_map|
+						arch = if option_map[Architecture] == 'x86'; ['-m32'] end
+						stop = if target == ObjectFile
+							'-c'
+						elsif target == Assembly
+							'-S'
+						else
+							raise "Unknown target #{target}"
+						end
+						puts "target is #{target}:#{stop}"
+						Builder.execute "#{option_map[Prefix]}gcc", '-ffreestanding', '-nostdlib', *arch, '-std=gnu99', '-x', 'c', '-pipe', stop, node.filename, '-o', output
+					end
+				end
+				
+				class Preprocessor < Processor
+					link Assembly::WithCPP => Assembly
+					
+					def self.convert(node, target)
+						node.cache(target, [Prefix]) do |output, option_map|
+							Builder.execute "#{option_map[Prefix]}gcc", '-x', 'assembler-with-cpp', '-pipe', '-E', node.filename, '-o', output
+						end
 					end
 				end
 			end
@@ -59,7 +79,10 @@ module Reno
 			
 			def self.use_component(package)
 				Assembler.use_component(package) if locate(package, 'as')
-				Compiler.use_component(package) if locate(package, 'gcc')
+				if locate(package, 'gcc')
+					Compiler.use_component(package)
+					Compiler::Preprocessor.use_component(package)
+				end
 				Linker.use_component(package) if locate(package, 'ld')
 				Archiver.use_component(package) if locate(package, 'ar')
 			end

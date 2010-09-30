@@ -1,6 +1,10 @@
 module Reno
 	class Assembly < File
-		register :ext, 'S'
+		register :ext, 's'
+		
+		class WithCPP < File
+			register :ext, 'S'
+		end
 	end
 	
 	class ObjectFile < File

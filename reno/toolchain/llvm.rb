@@ -14,7 +14,17 @@ module Reno
 				
 				def self.convert(node, target)
 					node.cache(target) do |output|
-						Builder.execute 'clang', '-emit-llvm', '-c', node.filename, '-o', output
+						Builder.execute 'clang', '-x', 'c', '-O3', '-emit-llvm', '-c', node.filename, '-o', output
+					end
+				end
+				
+				class Preprocessor < Processor
+					link Assembly::WithCPP => Assembly
+					
+					def self.convert(node, target)
+						node.cache(target) do |output|
+							Builder.execute 'clang', '-x', 'assembler-with-cpp', '-E', node.filename, '-o', output
+						end
 					end
 				end
 			end
@@ -28,7 +38,7 @@ module Reno
 					node.cache(target, [Target, Architecture]) do |output, option_map|
 						arch = if option_map[Architecture]; ['-march', option_map[Architecture].gsub('_', '-')] end
 						target = if option_map[Target]; ['-mtriple', option_map[Target].gsub('_', '-')] end
-						Builder.execute 'llc', *target, *arch, node.filename, '-o', output
+						Builder.execute 'llc', '-O3', *target, *arch, node.filename, '-o', output
 					end
 				end
 			end
@@ -51,7 +61,10 @@ module Reno
 			end
 			
 			def self.use_component(package)
-				Clang.use_component(package) if locate(package, 'clang')
+				if locate(package, 'clang')
+					Clang.use_component(package)
+					Clang::Preprocessor.use_component(package)
+				end
 				Compiler.use_component(package) if locate(package, 'llc')
 				Linker.use_component(package) if locate(package, 'llvm-link')
 			end
