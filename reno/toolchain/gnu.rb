@@ -25,7 +25,6 @@ module Reno
 						else
 							raise "Unknown target #{target}"
 						end
-						puts "target is #{target}:#{stop}"
 						Builder.execute "#{option_map[Prefix]}gcc", '-ffreestanding', '-nostdlib', *arch, '-std=gnu99', '-x', 'c', '-pipe', stop, node.filename, '-o', output
 					end
 				end
