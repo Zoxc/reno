@@ -81,7 +81,7 @@ module Reno
 		end
 		
 		def self.node_name
-			name.downcase.gsub('::', '.')
+			name.gsub('::', '.')[5..-1]
 		end
 		
 		def self.setup_subclass
