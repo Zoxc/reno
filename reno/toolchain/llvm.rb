@@ -11,10 +11,18 @@ module Reno
 			
 			class Clang < Processor
 				link Languages::C::File => BinaryBytecode
+				link Languages::C::File => Assembly
 				
 				def self.convert(node, target)
 					node.cache(target) do |output|
-						Builder.execute 'clang', '-x', 'c', '-O3', '-emit-llvm', '-c', node.filename, '-o', output
+						target_opt = if target == BinaryBytecode
+							['-c', '-emit-llvm']
+						elsif target == Assembly
+							['-S']
+						else
+							raise "Unknown target #{target}"
+						end
+						Builder.execute 'clang', '-x', 'c', '-O3', *target_opt, node.filename, '-o', output
 					end
 				end
 				
