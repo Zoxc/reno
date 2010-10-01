@@ -1,6 +1,7 @@
 require 'digest/sha2'
 require 'fileutils'
 require 'sequel'
+require 'pathname'
 
 module Reno
 	ROOT = File.dirname(File.expand_path(__FILE__)) unless defined?(Reno::ROOT)
@@ -20,7 +21,7 @@ module Reno
 	require 'reno/processor'
 	require 'reno/file'
 	require 'reno/package'
-	require 'reno/languages'
 	require 'reno/objectfiles'
+	require 'reno/languages'
 	require 'reno/toolchains'
 end

@@ -67,7 +67,7 @@ module Reno
 		end
 		
 		def run
-			@cache = Cache.new('cache')
+			@cache = Cache.new('cache', Dir.pwd)
 			state_block(@block) {}
 			@cache.purge
 		ensure

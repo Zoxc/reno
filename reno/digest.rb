@@ -25,11 +25,6 @@ module Reno
 			self
 		end
 		
-		def update_digest(digest)
-			@digest << digest.to_hex
-			self
-		end
-		
 		def update(data)
 			case data
 				when OptionMap
@@ -37,7 +32,7 @@ module Reno
 				when Digest
 					@digest << data.to_hex
 				when Node
-					@digest << data.node_name
+					@digest << data.class.node_name
 				when String
 					@digest << data
 			end

@@ -11,16 +11,14 @@ module Reno
 		end
 		
 		def collect(*patterns)
-			exts = @package.state.get_option File::Extension
 			patterns.each do |pattern|
 				files = Dir.glob(pattern)
 				files.each do |file|
-					ext = ::File.extname(file)[1..-1]
-					fileclass = exts[ext]
+					file = @package.cache.file_by_path(file, @package.state, :collect)
 					# skip to the next file or raise an error?
 					# raise CollectionError, "Unable to collect file '#{file}', could not identifiy the extension '#{ext}'" unless fileclass
-					next unless fileclass
-					@nodes << fileclass.new(file, @package.state)
+					next unless file
+					@nodes << file
 				end
 			end
 		end

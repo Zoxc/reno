@@ -5,40 +5,98 @@ module Reno
 		class CreationError < StandardError
 		end
 		
-		def self.register(type, *args)
-			case type
-				when :ext
-					ext = args[0]
-					@ext = ext
+		class << self
+			attr_reader :dependency_generator
+			
+			def register(type, *args)
+				case type
+					when :ext
+						ext = args[0]
+						@ext = ext
+					when :dependency_generator
+						generator = args[0]
+						@dependency_generator = generator
+				end
+			end
+			
+			def ext(dot = true)
+				dot ? (@ext ? ".#{@ext}" : "") : @ext 
+			end
+			
+			def collect(collect)
+				@collect = collect
+			end
+			
+			def collect?
+				!(@collect == false)
+			end
+			
+			def dependency_generator
+				@dependency_generator
+			end
+			
+			def use_component(package)
+				package.state.set_option File::Extension, {@ext => self} if @ext
+				nil
 			end
 		end
 		
-		def self.ext(dot = true)
-			dot ? (@ext ? ".#{@ext}" : "") : @ext 
-		end
+		attr_reader :filename, :origin, :id
 		
-		def self.use_component(package)
-			package.state.set_option File::Extension, {@ext => self} if @ext
-			nil
-		end
-		
-		attr_reader :filename, :origin
-		
-		def initialize(filename, state, digest = nil, origin = filename)
+		def initialize(filename, state)
 			@filename = filename
+			super(state)
+		end
+		
+		def set_origin(digest, origin)
 			@digest = digest
 			@origin = origin
-			super(state)
+			self
+		end
+		
+		def set_source(id)
+			@id = id
+			@origin = @filename
+			self
 		end
 		
 		def copy(path)
 			Builder.readypath(path)
 			FileUtils.copy(@filename, path)
-			self.class.new(path, @state, @digest)
+			@state.package.cache.file_by_path(path, @state, nil, self.class).set_origin(@digest, @origin)
+		end
+		
+		def relative(path)
+			::File.expand_path(path, ::File.dirname(@filename))
+		end
+		
+		def invalidate_dependencies
+			@dependencies = nil
+		end
+		
+		def dependencies
+			@dependencies ||= begin
+				raise "Circular dependencies" if @lock
+				@lock = true
+				dependencies = @state.package.cache.cache_dependencies(self) do
+					generator = self.class.dependency_generator
+					generator ? generator.find_dependencies(self) : []
+				end
+				@lock = nil
+				dependencies
+			end
 		end
 		
 		def digest
-			@digest ||= Digest.from_file(@filename).update_node(self.class)
+			return @digest if @digest
+			
+			@digest = @state.package.cache.cache_changes(self)
+			
+			dependencies.each do |dependency|
+				@digest.update dependency.digest
+			end
+			
+			@digest.update self
 		end
 		
 		def inspect
