@@ -2,17 +2,6 @@ module Reno
 	class Cache
 		Database = 'cache.db'
 		
-		class FileNotFoundError < StandardError
-			attr_reader :filename
-			def initialize(filename)
-			  @filename = filename
-			end
-			
-			def to_s
-				"Unable to find file #{@filename}"
-			end
-		end
-		
 		def initialize(path, source)
 			@path = path
 			@source = source
@@ -84,7 +73,6 @@ module Reno
 		def file_by_path(path, state, mode = nil, fileclass = class_from_path(path, state, mode))
 			return unless fileclass
 			filename = Builder.cleanpath(@source, path)
-			raise FileNotFoundError.new(filename) unless ::File.exists?(filename)
 			file = @files_by_path[filename]
 			return file if file
 
@@ -120,11 +108,7 @@ module Reno
 				end
 			else
 				result = block.call.map do |dependency|
-					begin
-						dependency = file_by_path(dependency, file.state, :require)
-					rescue FileNotFoundError => e
-						raise "Unable to find dependency #{e.filename} for #{file.filename}"
-					end
+					dependency = file_by_path(dependency, file.state, :require)
 				end
 				result.each do |dependency|
 					@dependencies.insert(source: file.id, dependency: dependency.id)
@@ -134,9 +118,14 @@ module Reno
 			end
 		end
 		
-		def cache_changes(file)
+		def cache_changes(file, path)
 			filename = file.filename
-			modified = ::File.mtime(filename)
+			
+			begin
+				modified = ::File.mtime(filename)
+			rescue StandardError => e
+				raise "Unable to find file #{filename}, required by:#{path.map { |file| "\n - #{file.filename}" }.join}"
+			end
 			
 			entry = @sources[:id => file.id]
 			

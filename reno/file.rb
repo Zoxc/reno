@@ -87,13 +87,13 @@ module Reno
 			end
 		end
 		
-		def digest
+		def digest(path = [])
 			return @digest if @digest
 			
-			@digest = @state.package.cache.cache_changes(self)
-			
+			@digest = @state.package.cache.cache_changes(self, path)
+			path = path.dup << self
 			dependencies.each do |dependency|
-				@digest.update dependency.digest
+				@digest.update dependency.digest(path)
 			end
 			
 			@digest.update self
