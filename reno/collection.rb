@@ -46,13 +46,14 @@ module Reno
 		def verify_combination?(combination)
 			# Walk backwards and make sure all links are the same. Return true if the same merge link is found on all paths.
 			size = -(combination.min { |path| path.size }.size)
-			while size < 0
-				first = combination.first[size]
+			index = -1
+			while index >= size
+				first = combination.first[index]
 				combination.each do |path|
-					return false unless path[size].eql?(first)
+					return false unless path[index].eql?(first)
 				end
 				return true if Node::MergeLink === first
-				size += 1
+				index -= 1
 			end
 			false
 		end
@@ -182,6 +183,7 @@ module Reno
 				# Find all the valid combinations
 				combinations = path_combinations(paths) do |combination|
 					# combination.each{ |paths| puts "Paths: #{paths.inspect}" }
+					# verify_combination? doesn't work if any array is empty
 					verify_combination?(combination)
 				end
 				
