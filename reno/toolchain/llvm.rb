@@ -10,11 +10,11 @@ module Reno
 			end
 			
 			class Clang < Processor
-				link Languages::C::File => BinaryBytecode
-				link Languages::C::File => Assembly
+				# Add Assembly here when Clang supports -march and -mtriple
+				link [Languages::C::File, Languages::CXX::File] => [BinaryBytecode]
 				
 				def self.convert(node, target)
-					node.cache(target) do |output|
+					node.cache(target, [Target, Architecture]) do |output, option_map|
 						target_opt = if target == BinaryBytecode
 							['-c', '-emit-llvm']
 						elsif target == Assembly
@@ -22,7 +22,19 @@ module Reno
 						else
 							raise "Unknown target #{target}"
 						end
-						Builder.execute 'clang', '-x', 'c', '-O3', *target_opt, node.filename, '-o', output
+						lang = case node
+							when Languages::C::File
+								'c'
+							when Languages::CXX::File
+								'c++'
+							else
+								raise "Unknown language #{node.class.node_name}"
+						end
+						if target == Assembly
+							arch = if option_map[Architecture]; ["-march=#{option_map[Architecture].gsub('_', '-')}"] end
+							triple = if option_map[Target]; ["-mtriple=#{option_map[Target].gsub('_', '-')}"] end
+						end
+						Builder.execute 'clang', *arch, *triple, '-x', *lang, '-O3', *target_opt, node.filename, '-o', output
 					end
 				end
 				
@@ -45,8 +57,8 @@ module Reno
 				def self.convert(node, target)
 					node.cache(target, [Target, Architecture]) do |output, option_map|
 						arch = if option_map[Architecture]; ['-march', option_map[Architecture].gsub('_', '-')] end
-						target = if option_map[Target]; ['-mtriple', option_map[Target].gsub('_', '-')] end
-						Builder.execute 'llc', '-O3', *target, *arch, node.filename, '-o', output
+						triple = if option_map[Target]; ['-mtriple', option_map[Target].gsub('_', '-')] end
+						Builder.execute 'llc', '-O3', *triple, *arch, node.filename, '-o', output
 					end
 				end
 			end
