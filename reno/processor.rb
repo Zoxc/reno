@@ -5,8 +5,13 @@ module Reno
 		end
 		
 		def self.link(links)
-			links.each_pair do |input, output|
-				input.link Node::Link.new(self, output)
+			links.each_pair do |inputs, outputs|
+				[*inputs].each do |input|
+					[*outputs].each do |output|
+						puts "linking #{self} : #{input} to #{output}"
+						input.link Node::Link.new(self, output)
+					end
+				end
 			end
 		end
 		
