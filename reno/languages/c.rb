@@ -57,7 +57,7 @@ module Reno
 						
 						case line
 							when /\s*#\s*include\s+"([^"]+)"/
-								includes << file.relative($1)
+								includes << [file.relative($1), file.class]
 							when %r|(?!//)[^/]*/\*|
 								in_block_comment = true
 						end

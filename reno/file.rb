@@ -39,6 +39,11 @@ module Reno
 				package.state.set_option File::Extension, {@ext => self} if @ext
 				nil
 			end
+			
+			def inherited(subclass)
+				subclass.setup_subclass
+				super
+			end
 		end
 		
 		attr_reader :filename, :origin, :id
@@ -91,7 +96,7 @@ module Reno
 			return @digest if @digest
 			
 			@digest = @state.package.cache.cache_changes(self, path)
-			path = path.dup << self
+			path = [self] + path
 			dependencies.each do |dependency|
 				@digest.update dependency.digest(path)
 			end

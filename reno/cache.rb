@@ -14,6 +14,7 @@ module Reno
 					primary_key :id
 					String :sha
 					String :path
+					String :type
 					DateTime :date
 					Boolean :checked_dependencies
 				end
@@ -70,21 +71,33 @@ module Reno
 			@files_by_id[id] = file
 		end
 		
-		def file_by_path(path, state, mode = nil, fileclass = class_from_path(path, state, mode))
-			return unless fileclass
+		def file_by_path(path, state, mode = nil, fileclass = nil)
 			filename = Builder.cleanpath(@source, path)
 			file = @files_by_path[filename]
 			return file if file
 
+			fileclass = class_from_path(path, state, mode) unless fileclass
+			return unless fileclass
+			
 			entry = @sources[:path => filename]
 			
 			if entry
 				id = entry[:id]
 			else
-				id = @sources.insert(path: filename, checked_dependencies: false)
+				id = @sources.insert(path: filename, checked_dependencies: false, type: fileclass.node_name)
 			end
 			
+			
 			create_file(id, filename, state, fileclass)
+		end
+		
+		def class_from_type(type)
+			object = Reno
+			type.split('.').each do |name|
+				object = object.const_get(name)
+			end
+			raise "#{object.inspect} is not a file type" unless File > object
+			object
 		end
 		
 		def file_by_id(id, state, fileclass = nil)
@@ -95,7 +108,7 @@ module Reno
 			raise "Unable to find file with id #{id}" unless entry
 			
 			filename = entry[:path]
-			fileclass = class_from_path(filename, state, :require) unless fileclass
+			fileclass = class_from_type(entry[:type])
 			
 			create_file(id, entry[:path], state, fileclass)
 		end
@@ -108,7 +121,7 @@ module Reno
 				end
 			else
 				result = block.call.map do |dependency|
-					dependency = file_by_path(dependency, file.state, :require)
+					dependency = file_by_path(dependency.first, file.state, :require, dependency.last)
 				end
 				result.each do |dependency|
 					@dependencies.insert(source: file.id, dependency: dependency.id)
