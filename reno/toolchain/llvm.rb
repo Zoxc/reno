@@ -30,10 +30,7 @@ module Reno
 							else
 								raise "Unknown language #{node.class.node_name}"
 						end
-						if target == Assembly
-							arch = if option_map[Architecture]; ["-march=#{option_map[Architecture].gsub('_', '-')}"] end
-							triple = if option_map[Target]; ["-mtriple=#{option_map[Target].gsub('_', '-')}"] end
-						end
+						arch = if option_map[Architecture] == 'x86'; ['-m32'] end
 						Builder.execute 'clang', *arch, *triple, '-x', *lang, '-O3', *target_opt, node.filename, '-o', output
 					end
 				end
@@ -50,6 +47,16 @@ module Reno
 			end
 			
 			Target = Option.new
+			
+			class Disassembler < Processor
+				link BinaryBytecode => Bytecode
+				
+				def self.convert(node, target)
+					node.cache(target) do |output|
+						Builder.execute 'llvm-dis', "-o=#{output}", node.filename
+					end
+				end
+			end
 			
 			class Compiler < Processor
 				link BinaryBytecode => Assembly
@@ -85,6 +92,7 @@ module Reno
 					Clang.use_component(package)
 					Clang::Preprocessor.use_component(package)
 				end
+				Disassembler.use_component(package) if locate(package, 'llvm-dis')
 				Compiler.use_component(package) if locate(package, 'llc')
 				Linker.use_component(package) if locate(package, 'llvm-link')
 			end
