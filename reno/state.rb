@@ -41,22 +41,23 @@ module Reno
 			end
 		end
 		
-		def apply_options(option_hash)
-			@parent.apply_options(option_hash) if @parent
+		def apply_options(option_set, option_hash)
+			@parent.apply_options(option_set, option_hash) if @parent
 			
-			option_hash.each_key do |option|
+			option_set.each do |option|
 				if @options.has_key?(option)
-					option_hash[option] = option.merge(option_hash[option], @options[option])
+					if option_hash.has_key?(option)
+						option_hash[option] = option.merge(option_hash[option], @options[option])
+					else
+						option_hash[option] = @options[option]
+					end
 				end
 			end
 		end
 		
 		def map_options(option_set)
 			option_hash = {}
-			option_set.each do |option|
-				option_hash[option] = option.default
-			end
-			apply_options(option_hash)
+			apply_options(option_set, option_hash)
 			OptionMap.new(option_hash)
 		end
 		

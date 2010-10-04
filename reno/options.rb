@@ -23,6 +23,12 @@ module Reno
 		end
 	end
 	
+	class BooleanOption < Option
+		def present?(value)
+			!(value == nil)
+		end
+	end
+	
 	class FileOption < Option
 	end
 	
@@ -32,7 +38,15 @@ module Reno
 		end
 		
 		def [](option)
-			@map[option]
+			@map.has_key?(option) ? @map[option] : option.default
+		end
+		
+		def present?(option)
+			@map.has_key?(option)
+		end
+		
+		def each_pair(&block)
+			@map.each_pair(&block)
 		end
 		
 		def digest
