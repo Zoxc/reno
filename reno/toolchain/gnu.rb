@@ -1,6 +1,8 @@
 module Reno
 	module Toolchain
 		module GNU
+			Prefix = Option.new
+			
 			class Assembler < Processor
 				link Assembly => ObjectFile
 				
@@ -14,8 +16,19 @@ module Reno
 			class Compiler < Processor
 				link [Languages::C::File, Languages::CXX::File] => [ObjectFile, Assembly]
 				
+				Options = [
+					Prefix,
+					Architecture,
+					Optimization,
+					Arch::X86_64::MemoryModel,
+					Arch::FreeStanding,
+					Arch::RedZone,
+					Languages::C::Standard,
+					Languages::CXX::Standard
+				]
+				
 				def self.convert(node, target)
-					node.cache(target, [Prefix, Architecture, Optimization, FreeStanding, Languages::C::Standard, Languages::CXX::Standard]) do |output, option_map|
+					node.cache(target, Options) do |output, option_map|
 						stop = if target == ObjectFile
 							'-c'
 						elsif target == Assembly
@@ -41,12 +54,16 @@ module Reno
 						option_map.each_pair do |option, value|
 							case option
 								when Architecture
-									if value == 'x86'; options << '-m32' end
+									if value == Arch::X86
+										options << '-m32'
+									elsif value == Arch::X86_64
+										options << '-m64'
+									end
 								
 								when Optimization
 									options.concat(case value
 										when :none
-											nil
+											[]
 										when :speed
 											['-O3']
 										when :balanced
@@ -55,8 +72,14 @@ module Reno
 											['-Os']
 									end)
 								
-								when FreeStanding
+								when Arch::X86_64::MemoryModel
+									options << "-mcmodel=#{value}" if option_map[Architecture] == Arch::X86_64
+								
+								when Arch::FreeStanding
 									options.concat ['-ffreestanding', '-nostdlib']
+								
+								when Arch::RedZone
+									options << '-mno-red-zone' unless value
 							end
 						end
 						
@@ -100,8 +123,6 @@ module Reno
 					end
 				end
 			end
-			
-			Prefix = Option.new
 			
 			def self.locate(package, name)
 				options = package.state.map_options [Prefix]

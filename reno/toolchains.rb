@@ -4,8 +4,6 @@ module Reno
 		
 		# Optimization is either :none, :speed, :balanced or :size
 		Optimization = Option.new
-		
-		FreeStanding = BooleanOption.new
 	end
 end
 

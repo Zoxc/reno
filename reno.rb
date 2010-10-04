@@ -23,5 +23,6 @@ module Reno
 	require 'reno/package'
 	require 'reno/objectfiles'
 	require 'reno/languages'
+	require 'reno/archs'
 	require 'reno/toolchains'
 end

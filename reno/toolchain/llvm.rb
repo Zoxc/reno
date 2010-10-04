@@ -1,6 +1,8 @@
 module Reno
 	module Toolchain
 		module LLVM
+			Target = Option.new
+			
 			class Bytecode < File
 				register :ext, 'll'
 			end
@@ -13,8 +15,19 @@ module Reno
 				# Add Assembly here when Clang supports -march and -mtriple
 				link [Languages::C::File, Languages::CXX::File] => [BinaryBytecode]
 				
+				Options = [
+					Target,
+					Architecture,
+					Optimization,
+					Arch::X86_64::MemoryModel,
+					Arch::FreeStanding,
+					Arch::RedZone,
+					Languages::C::Standard,
+					Languages::CXX::Standard
+				]
+				
 				def self.convert(node, target)
-					node.cache(target, [Target, Architecture]) do |output, option_map|
+					node.cache(target, Options) do |output, option_map|
 						target_opt = if target == BinaryBytecode
 							['-c', '-emit-llvm']
 						elsif target == Assembly
@@ -22,16 +35,54 @@ module Reno
 						else
 							raise "Unknown target #{target}"
 						end
+						
 						lang = case node
 							when Languages::C::File
-								'c'
+								['c', Languages::C::Standard]
+								
 							when Languages::CXX::File
-								'c++'
+								['c++', Languages::CXX::Standard]
 							else
 								raise "Unknown language #{node.class.node_name}"
 						end
-						arch = if option_map[Architecture] == 'x86'; ['-m32'] end
-						Builder.execute 'clang', *arch, *triple, '-x', *lang, '-O3', *target_opt, node.filename, '-o', output
+						
+						options = []
+						
+						options << "-std=gnu#{option_map[lang.last][1..-1]}" if option_map.present? lang.last
+						
+						option_map.each_pair do |option, value|
+							case option
+								when Architecture
+									if value == Arch::X86
+										options << '-m32'
+									elsif value == Arch::X86_64
+										options << '-m64'
+									end
+								
+								when Optimization
+									options.concat(case value
+										when :none
+											[]
+										when :speed
+											['-O3']
+										when :balanced
+											['-O2']
+										when :size
+											['-Os']
+									end)
+								
+								when Arch::X86_64::MemoryModel
+									options << "-mcmodel=#{value}" if option_map[Architecture] == Arch::X86_64
+								
+								when Arch::FreeStanding
+									options.concat ['-ffreestanding', '-nostdlib']
+								
+								when Arch::RedZone
+									options << '-mno-red-zone' unless value
+							end
+						end
+						
+						Builder.execute 'clang', *options, '-x', *lang.first, '-pipe', *target_opt, node.filename, '-o', output
 					end
 				end
 				
@@ -46,8 +97,6 @@ module Reno
 				end
 			end
 			
-			Target = Option.new
-			
 			class Disassembler < Processor
 				link BinaryBytecode => Bytecode
 				
@@ -61,11 +110,47 @@ module Reno
 			class Compiler < Processor
 				link BinaryBytecode => Assembly
 				
+				Options = [
+					Target,
+					Architecture,
+					Optimization,
+					Arch::RedZone,
+					Arch::X86_64::MemoryModel,
+				]
+				
 				def self.convert(node, target)
-					node.cache(target, [Target, Architecture]) do |output, option_map|
-						arch = if option_map[Architecture]; ['-march', option_map[Architecture].gsub('_', '-')] end
-						triple = if option_map[Target]; ['-mtriple', option_map[Target].gsub('_', '-')] end
-						Builder.execute 'llc', '-O3', *triple, *arch, node.filename, '-o', output
+					node.cache(target, Options) do |output, option_map|
+						options = []
+						
+						option_map.each_pair do |option, value|
+							case option
+								when Target
+									options.concat ['-mtriple', value.gsub('_', '-')]
+								
+								when Architecture
+									options.concat ['-march', value.name.gsub('_', '-')]
+								
+								when Optimization
+									options.concat(case value
+										when :none
+											[]
+										when :speed
+											['-O3']
+										when :balanced
+											['-O2']
+										when :size
+											['-O2']
+									end)
+								
+								when Arch::X86_64::MemoryModel
+									options << "-code-model=#{value}" if option_map[Architecture] == Arch::X86_64
+								
+								when Arch::RedZone
+									options << '-disable-red-zone' unless value
+							end
+						end
+						
+						Builder.execute 'llc', *options, node.filename, '-o', output
 					end
 				end
 			end
