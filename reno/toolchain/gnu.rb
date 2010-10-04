@@ -12,12 +12,10 @@ module Reno
 			end
 			
 			class Compiler < Processor
-				link Languages::C::File => ObjectFile
-				link Languages::C::File => Assembly
+				link [Languages::C::File, Languages::CXX::File] => [ObjectFile, Assembly]
 				
 				def self.convert(node, target)
-					node.cache(target, [Prefix, Architecture]) do |output, option_map|
-						arch = if option_map[Architecture] == 'x86'; ['-m32'] end
+					node.cache(target, [Prefix, Architecture, Optimization, FreeStanding, Languages::C::Standard, Languages::CXX::Standard]) do |output, option_map|
 						stop = if target == ObjectFile
 							'-c'
 						elsif target == Assembly
@@ -25,7 +23,44 @@ module Reno
 						else
 							raise "Unknown target #{target}"
 						end
-						Builder.execute "#{option_map[Prefix]}gcc", '-ffreestanding', '-nostdlib', *arch, '-std=gnu99', '-x', 'c', '-pipe', stop, node.filename, '-o', output
+						
+						lang = case node
+							when Languages::C::File
+								['c', Languages::C::Standard]
+								
+							when Languages::CXX::File
+								['c++', Languages::CXX::Standard]
+							else
+								raise "Unknown language #{node.class.node_name}"
+						end
+						
+						options = []
+						
+						options << "-std=gnu#{option_map[lang.last][1..-1]}" if option_map.present? lang.last
+						
+						option_map.each_pair do |option, value|
+							case option
+								when Architecture
+									if value == 'x86'; options << '-m32' end
+								
+								when Optimization
+									options.concat(case value
+										when :none
+											nil
+										when :speed
+											['-O3']
+										when :balanced
+											['-O2']
+										when :size
+											['-Os']
+									end)
+								
+								when FreeStanding
+									options.concat ['-ffreestanding', '-nostdlib']
+							end
+						end
+						
+						Builder.execute "#{option_map[Prefix]}gcc", *options, '-x', *lang.first, '-pipe', stop, node.filename, '-o', output
 					end
 				end
 				
