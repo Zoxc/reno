@@ -1,6 +1,6 @@
 module Reno
 	module Arch
-		class X86_64
+		class X86_64 < X86
 			# MemoryModel is either :small, :kernel, :medium or :large
 			MemoryModel = Option.new
 			

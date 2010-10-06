@@ -20,6 +20,10 @@ module Reno
 					Prefix,
 					Architecture,
 					Optimization,
+					Arch::X86::Enable3DNow,
+					Arch::X86::MMX,
+					Arch::X86::SSE,
+					Arch::X86::SSE2,
 					Arch::X86_64::MemoryModel,
 					Arch::FreeStanding,
 					Arch::RedZone,
@@ -71,6 +75,18 @@ module Reno
 										when :size
 											['-Os']
 									end)
+								
+								when Arch::X86::Enable3DNow
+									options << "-m#{"no-" unless value}3dnow" if option_map[Architecture] <= Arch::X86
+								
+								when Arch::X86::MMX
+									options << "-m#{"no-" unless value}mmx" if option_map[Architecture] <= Arch::X86
+									
+								when Arch::X86::SSE
+									options << "-m#{"no-" unless value}sse" if option_map[Architecture] <= Arch::X86
+								
+								when Arch::X86::SSE2
+									options << "-m#{"no-" unless value}sse2" if option_map[Architecture] <= Arch::X86
 								
 								when Arch::X86_64::MemoryModel
 									options << "-mcmodel=#{value}" if option_map[Architecture] == Arch::X86_64
