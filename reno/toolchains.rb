@@ -4,6 +4,11 @@ module Reno
 		
 		# Optimization is either :none, :speed, :balanced or :size
 		Optimization = Option.new
+		
+		# Exceptions is either :none, :simple, :seh, :sjlj or :dwarf
+		Exceptions = Option.new
+		
+		MergeConstants = BooleanOption.new
 	end
 end
 

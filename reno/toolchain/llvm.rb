@@ -19,6 +19,7 @@ module Reno
 					Target,
 					Architecture,
 					Optimization,
+					Exceptions,
 					Arch::X86::Enable3DNow,
 					Arch::X86::MMX,
 					Arch::X86::SSE,
@@ -74,6 +75,9 @@ module Reno
 										when :size
 											['-Os']
 									end)
+								
+								when Exceptions
+									options << "-f#{"no-" if value == :none}exceptions"
 								
 								when Arch::X86::Enable3DNow
 									options << "-m#{"no-" unless value}3dnow" if option_map[Architecture] <= Arch::X86
