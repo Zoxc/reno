@@ -1,3 +1,4 @@
+require 'faster_require'
 require 'digest/sha2'
 require 'fileutils'
 require 'sequel'
