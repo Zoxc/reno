@@ -10,6 +10,7 @@ module Reno
 		$LOAD_PATH.unshift(ROOT)
 	end
 	
+	require 'reno/dispatcher'
 	require 'reno/interface'
 	require 'reno/builder'
 	require 'reno/digest'
