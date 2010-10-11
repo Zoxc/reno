@@ -3,6 +3,23 @@ module Reno
 		class CollectionError < StandardError
 		end
 		
+		class NodeTypeMap
+			def initialize
+				@map = {}
+			end
+			
+			def get(node, &block)
+				key = [node.class, node.state]
+				result = @map[key]
+				return result if result
+				@map[key] = block.call(node.class, node.state)
+			end
+			
+			def paths
+				@map.values
+			end
+		end
+		
 		attr_reader :package, :nodes
 		
 		def initialize(package)
@@ -167,15 +184,17 @@ module Reno
 		end
 		
 		def merge(target)
-			paths = @nodes.map do |node|
-				path_result = node.path(target, @package)
-				raise "Unable to merge #{node} to #{target}" unless path_result
-				#path_result.results.each do |result|
-				#	puts "result #{result.inspect}"
-				#end
-				path_result.nodes << node
-				path_result
+			map = NodeTypeMap.new
+			
+			@nodes.each do |node|
+				map.get(node) do |type, state|
+					result = type.path(@package, state, target)
+					raise "Unable to merge #{type} to #{target}" unless result
+					result
+				end.nodes << node
 			end
+			
+			paths = map.paths
 			
 			collection = Collection.new(package)
 			
@@ -232,9 +251,13 @@ module Reno
 		
 		def convert(target)
 			collection = Collection.new(@package)
+			map = NodeTypeMap.new
 			nodes = @nodes.map do |node|
-				path_result = node.path(target)
-				raise "Unable to convert #{node} to #{target}" unless path_result
+				path_result = map.get(node) do |type, state|
+					result = type.path(nil, state, target)
+					raise "Unable to convert #{type} to #{target}" unless result
+					result
+				end
 				{node: node, path: path_result}
 			end
 			collection.nodes.concat(nodes.map { |pair| pair[:path].follow(pair[:node]) })
