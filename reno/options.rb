@@ -23,6 +23,20 @@ module Reno
 		end
 	end
 	
+	class ListOption < Option
+		def set(value)
+			Array === value ? value : [value]
+		end
+		
+		def merge(low, high)
+			low + high
+		end
+		
+		def default
+			[]
+		end
+	end
+	
 	class BooleanOption < Option
 		def present?(value)
 			!(value == nil)

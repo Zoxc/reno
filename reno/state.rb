@@ -62,10 +62,11 @@ module Reno
 		end
 		
 		def set_option(option, value)
+			value = option.set(value)
 			if @options.has_key?(option)
 				@options[option] = option.merge(@options[option], value)
 			else
-				@options[option] = option.set(value)
+				@options[option] = value
 			end
 		end
 		

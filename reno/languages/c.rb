@@ -2,6 +2,7 @@ module Reno
 	module Languages
 		class C < Language
 			Standard = Option.new
+			Includes = ListOption.new
 			Defines = HashOption.new
 			
 			class Preprocessor
@@ -20,8 +21,16 @@ module Reno
 				# Returns two arguments:
 				# 1. A list of all local includes (e.g. #include "stdio.h").
 				
-				def self.find_dependencies(file)
-					src = ::File.open(file.filename, 'r') { |file| file.read }
+				def self.find_file(include, paths)
+					paths.each do |path|
+						file = ::File.join(path, include)
+						return file if ::File.exists?(file)
+					end
+					nil
+				end
+				
+				def self.find_dependencies(file, path)
+					src = file.content
 					
 					includes = []
 					in_block_comment = false
@@ -57,13 +66,18 @@ module Reno
 						
 						case line
 							when /\s*#\s*include\s+"([^"]+)"/
-								includes << [file.relative($1), file.class]
+								includes << $1
 							when %r|(?!//)[^/]*/\*|
 								in_block_comment = true
 						end
 					end
 					
-					includes
+					includes.map do |include|
+						paths = [file.dir] + file.state.get_option(Includes)
+						filename = find_file(include, paths)
+						File.missing_dependency(include, path) unless filename
+						[filename, file.class]
+					end
 				end
 			end
 			

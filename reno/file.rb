@@ -44,6 +44,10 @@ module Reno
 				subclass.setup_subclass
 				super
 			end
+			
+			def missing_dependency(path)
+				raise "Unable to find file #{@filename}, required by:#{path.map { |file| "\n - #{file.filename}" }.join}"
+			end
 		end
 		
 		attr_reader :filename, :origin, :id
@@ -71,6 +75,10 @@ module Reno
 			@state.package.cache.file_by_path(path, @state, nil, self.class).set_origin(@digest, @origin)
 		end
 		
+		def dir
+			::File.dirname(@filename)
+		end
+		
 		def relative(path)
 			::File.expand_path(path, ::File.dirname(@filename))
 		end
@@ -79,13 +87,17 @@ module Reno
 			@dependencies = nil
 		end
 		
-		def dependencies
+		def content
+			@content ||= ::File.open(@filename, 'r') { |file| file.read }
+		end
+		
+		def dependencies(path)
 			@dependencies ||= begin
 				raise "Circular dependencies" if @lock
 				@lock = true
 				dependencies = @state.package.cache.cache_dependencies(self) do
 					generator = self.class.dependency_generator
-					generator ? generator.find_dependencies(self) : []
+					generator ? generator.find_dependencies(self, path) : []
 				end
 				@lock = nil
 				dependencies
@@ -96,10 +108,14 @@ module Reno
 			return @digest if @digest
 			
 			@digest = @state.package.cache.cache_changes(self, path)
+			
 			path = [self] + path
-			dependencies.each do |dependency|
+			dependencies(path).each do |dependency|
 				@digest.update dependency.digest(path)
 			end
+			
+			# Content is useless once we have dependencies and the digest
+			@content = nil
 			
 			@digest.update self
 		end

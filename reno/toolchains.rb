@@ -9,6 +9,8 @@ module Reno
 		Exceptions = Option.new
 		
 		MergeConstants = BooleanOption.new
+		
+		Libraries = ListOption.new
 	end
 end
 

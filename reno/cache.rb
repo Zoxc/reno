@@ -137,13 +137,13 @@ module Reno
 			begin
 				modified = ::File.mtime(filename)
 			rescue StandardError => e
-				raise "Unable to find file #{filename}, required by:#{path.map { |file| "\n - #{file.filename}" }.join}"
+				file.missing_dependency(path)
 			end
 			
 			entry = @sources[:id => file.id]
 			
 			if !entry[:sha] || modified > entry[:date]
-				sha = Digest.from_file(filename).to_hex
+				sha = Digest.new.update(file.content).to_hex
 				if sha != entry[:sha]
 					@sources[id: entry[:id]] = {sha: sha, date: modified, checked_dependencies: false};
 					
