@@ -238,7 +238,9 @@ module Reno
 			digest.update_node(target)
 			filename = place(node.origin, target, digest) do |filename|
 				puts "Converting #{node.origin} from #{node.class.node_name} to #{target.node_name}"
-				block.call(filename, option_map)
+				node.state.package.generate do
+					block.call(filename, option_map)
+				end
 			end
 			target.new(filename, node.state).set_origin(digest, node.origin)
 		end

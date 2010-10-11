@@ -66,10 +66,25 @@ module Reno
 			end
 		end
 		
+		def measure(&block)
+			start = Time.now
+			block.call
+			stop = Time.now
+			stop - start;
+		end
+		
+		def generate(&block)
+			@generated += measure(&block);
+		end
+		
 		def run
-			@cache = Cache.new('cache', Dir.pwd)
-			state_block(@block) {}
-			@cache.purge
+			@generated = 0
+			time = measure do
+				@cache = Cache.new('cache', Dir.pwd)
+				state_block(@block) {}
+				@cache.purge
+			end
+			puts "Processed %s in %.2fs, excluding generation %.2fs" % [@name, time, time - @generated]
 		ensure
 			@cache = nil
 		end
