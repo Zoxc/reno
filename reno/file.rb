@@ -45,8 +45,8 @@ module Reno
 				super
 			end
 			
-			def missing_dependency(path)
-				raise "Unable to find file #{@filename}, required by:#{path.map { |file| "\n - #{file.filename}" }.join}"
+			def missing_dependency(filename, path)
+				raise "Unable to find file #{filename}, required by:#{path.map { |file| "\n - #{file.filename}" }.join}"
 			end
 		end
 		

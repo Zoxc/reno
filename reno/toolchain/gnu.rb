@@ -150,6 +150,7 @@ module Reno
 						use_linker = false
 						executable = 'gcc'
 						linker_options = []
+						libraries = []
 						
 						option_map.each_pair do |option, value|
 							case option
@@ -168,7 +169,7 @@ module Reno
 											options << "-L#{::File.dirname(library)}"
 											library = ::File.basename(library)
 										end
-										options << "-l#{library}"
+										libraries << "-l#{library}"
 									end
 							end
 						end
@@ -184,7 +185,7 @@ module Reno
 						
 						options << '-shared' if target == SharedLibrary
 						
-						Builder.execute "#{option_map[Prefix]}#{executable}", *options, *nodes.map { |node| node.filename }, '-o', output
+						Builder.execute "#{option_map[Prefix]}#{executable}", *options, *nodes.map { |node| node.filename }, *libraries, '-o', output
 					end
 				end
 			end

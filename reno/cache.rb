@@ -137,7 +137,7 @@ module Reno
 			begin
 				modified = ::File.mtime(filename)
 			rescue StandardError => e
-				file.missing_dependency(path)
+				File.missing_dependency(filename, path)
 			end
 			
 			entry = @sources[:id => file.id]
