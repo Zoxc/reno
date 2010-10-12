@@ -11,6 +11,8 @@ module Reno
 		MergeConstants = BooleanOption.new
 		
 		Libraries = ListOption.new
+		
+		StaticLibraries = BooleanOption.new
 	end
 end
 

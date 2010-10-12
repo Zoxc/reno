@@ -7,8 +7,21 @@ module Reno
 				link Assembly => ObjectFile
 				
 				def self.convert(node, target)
-					node.cache(target, [Prefix]) do |output, option_map|
-						Builder.execute "#{option_map[Prefix]}as", node.filename, '-o', output
+					node.cache(target, [Prefix, Architecture]) do |output, option_map|
+						options = []
+						
+						option_map.each_pair do |option, value|
+							case option
+								when Architecture
+									if value == Arch::X86
+										options << '--32'
+									elsif value == Arch::X86_64
+										options << '--64'
+									end
+							end
+						end
+						
+						Builder.execute "#{option_map[Prefix]}as", *options, node.filename, '-o', output
 					end
 				end
 			end
@@ -137,10 +150,12 @@ module Reno
 				PageSize = Option.new
 				
 				Options = [
+					Architecture,
 					Prefix,
 					Script,
 					PageSize,
 					Libraries,
+					StaticLibraries,
 					Arch::FreeStanding
 				]
 				
@@ -150,10 +165,18 @@ module Reno
 						use_linker = false
 						executable = 'gcc'
 						linker_options = []
+						frontend_options = []
 						libraries = []
 						
 						option_map.each_pair do |option, value|
 							case option
+								when Architecture
+									if value == Arch::X86
+										frontend_options << '-m32'
+									elsif value == Arch::X86_64
+										frontend_options << '-m64'
+									end
+								
 								when Arch::FreeStanding
 									use_linker = true
 								
@@ -171,6 +194,9 @@ module Reno
 										end
 										libraries << "-l#{library}"
 									end
+									
+								when StaticLibraries
+									options << '-static'
 							end
 						end
 						
@@ -178,6 +204,7 @@ module Reno
 							executable = 'ld'
 							options.concat linker_options
 						else
+							options.concat frontend_options
 							linker_options.each do |option|
 								options << '-Xlinker' << option
 							end
