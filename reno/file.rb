@@ -65,7 +65,7 @@ module Reno
 		
 		def set_source(id)
 			@id = id
-			@origin = @filename
+			@origin = self
 			self
 		end
 		
