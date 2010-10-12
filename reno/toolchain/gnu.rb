@@ -136,12 +136,55 @@ module Reno
 				Script = FileOption.new
 				PageSize = Option.new
 				
+				Options = [
+					Prefix,
+					Script,
+					PageSize,
+					Libraries,
+					Arch::FreeStanding
+				]
+				
 				def self.merge(package, nodes, target)
-					package.cache_collection(nodes, target, [Prefix, Script, PageSize]) do |output, option_map|
-						script = if option_map[Script]; ['-T', option_map[Script]] end
-						page_size = if option_map[PageSize]; ['-z', "max-page-size=#{option_map[PageSize]}"] end
-						shared = if target == SharedLibrary; '-shared' end
-						Builder.execute "#{option_map[Prefix]}ld", *script, *page_size, *shared, *nodes.map { |node| node.filename }, '-o', output
+					package.cache_collection(nodes, target, Options) do |output, option_map|
+						options = ['-L.']
+						use_linker = false
+						executable = 'gcc'
+						linker_options = []
+						
+						option_map.each_pair do |option, value|
+							case option
+								when Arch::FreeStanding
+									use_linker = true
+								
+								when Script
+									linker_options.concat ['-T', value]
+								
+								when PageSize
+									linker_options.concat ['-z', "max-page-size=#{value}"]
+								
+								when Libraries
+									value.each do |library|
+										if ::File.dirname(library) != '.'
+											options << "-L#{::File.dirname(library)}"
+											library = ::File.basename(library)
+										end
+										options << "-l#{library}"
+									end
+							end
+						end
+						
+						if use_linker
+							executable = 'ld'
+							options.concat linker_options
+						else
+							linker_options.each do |option|
+								options << '-Xlinker' << option
+							end
+						end
+						
+						options << '-shared' if target == SharedLibrary
+						
+						Builder.execute "#{option_map[Prefix]}#{executable}", *options, *nodes.map { |node| node.filename }, '-o', output
 					end
 				end
 			end
