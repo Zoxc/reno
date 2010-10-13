@@ -167,6 +167,7 @@ module Reno
 						linker_options = []
 						frontend_options = []
 						libraries = []
+						executable = 'g++' if nodes.find { |node| node.origin.class == Languages::CXX::File }
 						
 						option_map.each_pair do |option, value|
 							case option
