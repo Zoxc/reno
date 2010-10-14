@@ -13,6 +13,8 @@ module Reno
 		Libraries = ListOption.new
 		
 		StaticLibraries = BooleanOption.new
+		
+		DebugInformation = BooleanOption.new
 	end
 end
 

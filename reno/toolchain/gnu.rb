@@ -35,6 +35,7 @@ module Reno
 					Optimization,
 					MergeConstants,
 					Exceptions,
+					DebugInformation,
 					Arch::X86::Enable3DNow,
 					Arch::X86::MMX,
 					Arch::X86::SSE,
@@ -98,6 +99,9 @@ module Reno
 								
 								when Exceptions
 									options << "-f#{"no-" if value == :none}exceptions"
+									
+								when DebugInformation
+									options << "-g"
 								
 								when Arch::X86::Enable3DNow
 									options << "-m#{"no-" unless value}3dnow" if option_map[Architecture] <= Arch::X86
@@ -197,7 +201,7 @@ module Reno
 									end
 									
 								when StaticLibraries
-									options << '-static'
+									options << '-static' if value
 							end
 						end
 						
