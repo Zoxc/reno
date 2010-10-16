@@ -131,10 +131,5 @@ module Reno
 		def cache(target, option_set = nil, &block)
 			@state.package.cache.cache(self, target, option_set, &block)
 		end
-		
-		def path(target, package = nil)
-			result = self.class.path(package, @state, target)
-			result.empty? ? nil : result
-		end
 	end
 end

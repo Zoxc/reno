@@ -187,11 +187,12 @@ module Reno
 			map = NodeTypeMap.new
 			
 			@nodes.each do |node|
-				map.get(node) do |type, state|
+				path = map.get(node) do |type, state|
 					result = type.path(@package, state, target)
-					raise "Unable to merge #{type} to #{target}" unless result
+					raise "Unable to merge #{type} to #{target}" if result.empty?
 					result
-				end.nodes << node
+				end
+				path.nodes << node
 			end
 			
 			paths = map.paths
@@ -255,7 +256,7 @@ module Reno
 			nodes = @nodes.map do |node|
 				path_result = map.get(node) do |type, state|
 					result = type.path(nil, state, target)
-					raise "Unable to convert #{type} to #{target}" unless result
+					raise "Unable to convert #{type} to #{target}" if result.empty?
 					result
 				end
 				{node: node, path: path_result}
