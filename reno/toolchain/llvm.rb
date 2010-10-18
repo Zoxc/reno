@@ -20,6 +20,7 @@ module Reno
 					Architecture,
 					Optimization,
 					Exceptions,
+					DebugInformation,
 					Arch::X86::Enable3DNow,
 					Arch::X86::MMX,
 					Arch::X86::SSE,
@@ -28,6 +29,8 @@ module Reno
 					Arch::FreeStanding,
 					Arch::RedZone,
 					Languages::C::Standard,
+					Languages::C::Includes,
+					Languages::C::Defines,
 					Languages::CXX::Standard
 				]
 				
@@ -79,6 +82,9 @@ module Reno
 								when Exceptions
 									options << "-f#{"no-" if value == :none}exceptions"
 								
+								when DebugInformation
+									options << "-g"
+								
 								when Arch::X86::Enable3DNow
 									options << "-m#{"no-" unless value}3dnow" if option_map[Architecture] <= Arch::X86
 								
@@ -99,6 +105,12 @@ module Reno
 								
 								when Arch::RedZone
 									options << '-mno-red-zone' unless value
+								
+								when Languages::C::Includes
+									options.concat value.map { |path| "-I#{path}" }
+								
+								when Languages::C::Defines
+									value.each_pair { |key, value| options << "-D#{key}#{"=#{value}" if value}" }
 							end
 						end
 						
