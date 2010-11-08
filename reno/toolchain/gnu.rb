@@ -1,6 +1,12 @@
 module Reno
 	module Toolchain
 		module GNU
+			AS = 'as'
+			AR = 'ar'
+			GCC = ENV['CC'] || 'gcc'
+			GXX = ENV['CXX'] || 'g++'
+			LD = ENV['LD'] || 'ld'
+			
 			Prefix = Option.new
 			
 			class Assembler < Processor
@@ -21,7 +27,7 @@ module Reno
 							end
 						end
 						
-						Builder.execute "#{option_map[Prefix]}as", *options, node.filename, '-o', output
+						Builder.execute "#{option_map[Prefix]}#{AS}", *options, node.filename, '-o', output
 					end
 				end
 			end
@@ -61,17 +67,17 @@ module Reno
 						
 						lang = case node
 							when Languages::C::File
-								['c', Languages::C::Standard]
+								['c', Languages::C::Standard, GCC]
 								
 							when Languages::CXX::File
-								['c++', Languages::CXX::Standard]
+								['c++', Languages::CXX::Standard, GXX]
 							else
 								raise "Unknown language #{node.class.node_name}"
 						end
 						
 						options = []
 						
-						options << "-std=gnu#{option_map[lang.last][1..-1]}" if option_map.present? lang.last
+						options << "-std=gnu#{option_map[lang[1]][1..-1]}" if option_map.present? lang[1]
 						
 						option_map.each_pair do |option, value|
 							case option
@@ -132,7 +138,7 @@ module Reno
 							end
 						end
 						
-						Builder.execute "#{option_map[Prefix]}gcc", *options, '-x', *lang.first, '-pipe', stop, node.filename, '-o', output
+						Builder.execute "#{option_map[Prefix]}#{lang.last}", *options, '-x', *lang.first, '-pipe', stop, node.filename, '-o', output
 					end
 				end
 				
@@ -141,7 +147,7 @@ module Reno
 					
 					def self.convert(node, target)
 						node.cache(target, [Prefix]) do |output, option_map|
-							Builder.execute "#{option_map[Prefix]}gcc", '-x', 'assembler-with-cpp', '-pipe', '-E', node.filename, '-o', output
+							Builder.execute "#{option_map[Prefix]}#{GCC}", '-x', 'assembler-with-cpp', '-pipe', '-E', node.filename, '-o', output
 						end
 					end
 				end
@@ -167,11 +173,11 @@ module Reno
 					package.cache_collection(nodes, target, Options) do |output, option_map|
 						options = ['-L.']
 						use_linker = false
-						executable = 'gcc'
+						executable = GCC
 						linker_options = []
 						frontend_options = []
 						libraries = []
-						executable = 'g++' if nodes.find { |node| node.origin.class == Languages::CXX::File }
+						executable = GXX if nodes.find { |node| node.origin.class == Languages::CXX::File }
 						
 						option_map.each_pair do |option, value|
 							case option
@@ -206,7 +212,7 @@ module Reno
 						end
 						
 						if use_linker
-							executable = 'ld'
+							executable = LD
 							options.concat linker_options
 						else
 							options.concat frontend_options
@@ -227,7 +233,7 @@ module Reno
 				
 				def self.merge(package, nodes, target)
 					package.cache_collection(nodes, target, [Prefix]) do |output, option_map|
-						Builder.execute("#{option_map[Prefix]}ar", 'rsc', output, *nodes.map { |node| node.filename })
+						Builder.execute("#{option_map[Prefix]}#{AR}", 'rsc', output, *nodes.map { |node| node.filename })
 					end
 				end
 			end
@@ -241,13 +247,13 @@ module Reno
 			end
 			
 			def self.use_component(package)
-				Assembler.use_component(package) if locate(package, 'as')
-				if locate(package, 'gcc')
+				Assembler.use_component(package) if locate(package, AS)
+				if locate(package, GCC)
 					Compiler.use_component(package)
 					Compiler::Preprocessor.use_component(package)
 				end
-				Linker.use_component(package) if locate(package, 'ld')
-				Archiver.use_component(package) if locate(package, 'ar')
+				Linker.use_component(package) if locate(package, LD)
+				Archiver.use_component(package) if locate(package, AR)
 			end
 		end
 	end
