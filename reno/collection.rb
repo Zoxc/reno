@@ -237,7 +237,14 @@ module Reno
 			collection.nodes.concat(other.nodes)
 			collection
 		end
+				
+		def -(other)
+			collection = Collection.new(@package)
+			collection.nodes.concat(@nodes - other.nodes)
+			collection
+		end
 		
+
 		def &(other)
 			collection = Collection.new(@package)
 			collection.nodes.concat(@nodes)
