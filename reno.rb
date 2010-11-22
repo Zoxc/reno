@@ -1,4 +1,8 @@
-require 'faster_require'
+begin
+	require 'faster_require'
+rescue LoadError
+end
+
 require 'digest/sha2'
 require 'fileutils'
 require 'sequel'
