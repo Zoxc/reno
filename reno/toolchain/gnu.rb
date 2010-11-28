@@ -41,6 +41,8 @@ module Reno
 					Optimization,
 					MergeConstants,
 					Exceptions,
+					Reflection,
+					StackProtection,
 					DebugInformation,
 					Arch::X86::Enable3DNow,
 					Arch::X86::MMX,
@@ -105,6 +107,19 @@ module Reno
 								
 								when Exceptions
 									options << "-f#{"no-" if value == :none}exceptions"
+									
+								when Reflection
+									options << "-f#{"no-" unless value}rtti" && lang.first == 'c++'
+									
+								when StackProtection
+									options.concat(case value
+										when :none
+											['-fno-stack-protector']
+										when :partial
+											['-fstack-protector']
+										when :full
+											['-fstack-protector-all']
+									end)
 									
 								when DebugInformation
 									options << "-g"

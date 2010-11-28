@@ -8,6 +8,11 @@ module Reno
 		# Exceptions is either :none, :simple, :seh, :sjlj or :dwarf
 		Exceptions = Option.new
 		
+		Reflection = BooleanOption.new
+		
+		# StackProtection is either :none, :partial or :full
+		StackProtection = Option.new
+		
 		MergeConstants = BooleanOption.new
 		
 		Libraries = ListOption.new
