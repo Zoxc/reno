@@ -81,7 +81,9 @@ module Reno
 			@generated = 0
 			time = measure do
 				@cache = Cache.new('cache', Dir.pwd)
+				@dispatcher = Dispatcher.new
 				state_block(@block) {}
+				@dispatcher = nil
 				@cache.purge
 			end
 			puts "Processed %s in %.2fs, excluding generation %.2fs" % [@name, time, time - @generated]

@@ -54,6 +54,7 @@ module Reno
 		
 		def initialize(filename, state)
 			@filename = filename
+			@digest_mutex = Mutex.new
 			super(state)
 		end
 		
@@ -91,37 +92,39 @@ module Reno
 			@content ||= ::File.open(@filename, 'r') { |file| file.read }
 		end
 		
-		def dependencies(path)
-			@dependencies ||= begin
-				raise "Circular dependencies" if @lock
-				@lock = true
-				dependencies = @state.package.cache.cache_dependencies(self) do
-					generator = self.class.dependency_generator
-					generator ? generator.find_dependencies(self, path) : []
-				end
-				@lock = nil
-				dependencies
-			end
-		end
-		
 		def digest(path = [])
-			return @digest if @digest
-			
-			@digest = @state.package.cache.cache_changes(self, path)
-			
-			path = [self] + path
-			dependencies(path).each do |dependency|
-				@digest.update dependency.digest(path)
+			@digest_mutex.synchronize do
+				return @digest if @digest
+				
+				@digest = @state.package.cache.cache_changes(self, path)
+				
+				path = [self] + path
+				dependencies(path).each do |dependency|
+					@digest.update dependency.digest(path)
+				end
+				
+				# Content is useless once we have dependencies and the digest
+				@content = nil
+				
+				@digest.update self
 			end
-			
-			# Content is useless once we have dependencies and the digest
-			@content = nil
-			
-			@digest.update self
 		end
 		
 		def inspect
 			"#<#{self.class} filename=#{@filename.inspect}>"
 		end
+		
+		private
+		
+		def dependencies(path)
+			@dependencies ||= begin
+				dependencies = @state.package.cache.cache_dependencies(self) do
+					generator = self.class.dependency_generator
+					generator ? generator.find_dependencies(self, path) : []
+				end
+				dependencies
+			end
+		end
+		
 	end
 end

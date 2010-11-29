@@ -45,7 +45,11 @@ module Reno
 			end
 		end
 		
-		def initialize(thread_count)
+		def default_thread_count
+			4
+		end
+		
+		def initialize(thread_count = default_thread_count)
 			@threads = (1..thread_count).map { Thread.new(self) }
 			@leafs = []
 			@sleeping = []

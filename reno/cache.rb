@@ -39,7 +39,10 @@ module Reno
 			end
 			@files_by_path = {}
 			@files_by_id = {}
+			@generating = {}
 			@cached = @db[:cached]
+			@cached_mutex = Mutex.new
+			@input_mutex = Mutex.new
 			@sources = @db[:sources]
 			@dependencies = @db[:dependencies]
 			sessions = @db[:session]
@@ -73,22 +76,24 @@ module Reno
 		
 		def file_by_path(path, state, mode = nil, fileclass = nil)
 			filename = Builder.cleanpath(@source, path)
-			file = @files_by_path[filename]
-			return file if file
+			
+			@input_mutex.synchronize do
+				file = @files_by_path[filename]
+				return file if file
 
-			fileclass = class_from_path(path, state, mode) unless fileclass
-			return unless fileclass
-			
-			entry = @sources[:path => filename]
-			
-			if entry
-				id = entry[:id]
-			else
-				id = @sources.insert(path: filename, checked_dependencies: false, type: fileclass.node_name)
+				fileclass = class_from_path(path, state, mode) unless fileclass
+				return unless fileclass
+				
+				entry = @sources[:path => filename]
+				
+				if entry
+					id = entry[:id]
+				else
+					id = @sources.insert(path: filename, checked_dependencies: false, type: fileclass.node_name)
+				end
+				
+				create_file(id, filename, state, fileclass)
 			end
-			
-			
-			create_file(id, filename, state, fileclass)
 		end
 		
 		def class_from_type(type)
@@ -101,16 +106,18 @@ module Reno
 		end
 		
 		def file_by_id(id, state, fileclass = nil)
-			file = @files_by_id[id]
-			return file if file
-			
-			entry = @sources[:id => id]
-			raise "Unable to find file with id #{id}" unless entry
-			
-			filename = entry[:path]
-			fileclass = class_from_type(entry[:type])
-			
-			create_file(id, entry[:path], state, fileclass)
+			@input_mutex.synchronize do
+				file = @files_by_id[id]
+				return file if file
+				
+				entry = @sources[:id => id]
+				raise "Unable to find file with id #{id}" unless entry
+				
+				filename = entry[:path]
+				fileclass = class_from_type(entry[:type])
+				
+				create_file(id, entry[:path], state, fileclass)
+			end
 		end
 		
 		def cache_dependencies(file, &block)
@@ -123,6 +130,7 @@ module Reno
 				result = block.call.map do |dependency|
 					dependency = file_by_path(dependency.first, file.state, :require, dependency.last)
 				end
+				
 				result.each do |dependency|
 					@dependencies.insert(source: file.id, dependency: dependency.id)
 				end
@@ -158,77 +166,100 @@ module Reno
 			Digest.new.update(sha)
 		end
 		
-		def free_path(free_path, free_id)
+		def free_path(hash)
 			# find the entry that has this filename
-			entry = @cached[:path => free_path]
-			return unless entry
-			
-			# return if we're already using this entry
-			return if entry[:id] == free_id
+			entry = @cached[:path => hash[:path]]
+			return hash[:path] unless entry
 			
 			# setup variables
-			path = entry[:path]
+			path = hash[:path]
 			ext = ::File.extname(path)
 			base = path[0...-ext.size]
-			attempt = entry[:attempt]
-			base.chomp!("-#{attempt}") if attempt != 0
+			attempt = 0
 			
-			# find a free filename so we can rename this entry
+			# find a free filename we can use
 			begin
 				attempt += 1
 				new_path = "#{base}-#{attempt}#{ext}"
-			end while @cached.filter(path: new_path).count > 0
+			end while (@generating[new_path] || @cached.filter(path: new_path).count > 0)
 			
-			# rename this entry and update the database
-			::File.rename(::File.join(@path, path), ::File.join(@path, new_path))
-			@cached[id: entry[:id]] = {attempt: attempt, path: new_path}
+			hash[:attempt] = attempt
+			return hash[:path] = new_path
 		end
 		
 		def place(path, target, digest, &block)
-			# make a filename for this file
-			result = "#{path}#{target.ext}"
-			result = '_' + result if result == Database
-			
 			sha = digest.to_hex
 			
-			# the values an entry should have
-			hash = {attempt: 0, session: @session, path: result, sha: sha}
-			
-			# check if there's a entry for this already
-			entry = @cached[:sha => sha]
-			
-			# make sure the filename is free
-			free_path(result, entry ? entry[:id] : nil)
-			
-			# build the final path and create required directories
-			final = Builder.readypath(::File.join(@path, result))
-			
-			if entry
-				# rename the existing file if it doesn't match with our result
-				if result != entry[:path]
-					::File.rename(::File.join(@path, entry[:path]), final)
+			@cached_mutex.lock
+			begin
+				# check if there's a entry for this already
+				entry = @cached[:sha => sha]
+				
+				if entry
+					# make sure the file is actually generated
+					mutex = @generating[entry[:path]]
+					if mutex
+						@cached_mutex.unlock
+						begin
+							mutex.lock
+							mutex.unlock
+						ensure
+							@cached_mutex.lock
+						end
+					end
+					
+					final = ::File.join(@path, entry[:path])
+					
+					# update the database with the new session
+					@cached.filter(id: entry[:id]).update(session: @session)
+				else
+					# make a filename for this file
+					result = "#{path}#{target.ext}"
+					result = '_' + result if result == Database
+					
+					# the values an entry should have
+					hash = {attempt: 0, session: @session, path: result, sha: sha}
+					
+					# make sure the filename is free, get a new one otherwise
+					result = free_path(hash)
+					
+					# build the final path and create required directories
+					final = Builder.readypath(::File.join(@path, result))
+					
+					# insert the entry into the database
+					id = @cached.insert(hash)
+					begin
+						mutex = @generating[result] = Mutex.new
+						mutex.lock
+						@cached_mutex.unlock
+						begin
+							# generate the new file
+							block.call(final)
+						ensure
+							@cached_mutex.lock
+							mutex.unlock
+							@generating.delete(result)
+						end
+					rescue Exception
+						# remove the entry if something bad happened
+						@cached.filter(id: id).delete
+						raise
+					end
 				end
 				
-				# update the database with the new filename and session
-				@cached[id: entry[:id]] = hash;
-			else
-				# generate the new file
-				block.call(final)
-				
-				# the next step should not be executed if the generation failed
-
-				# insert the entry into the database
-				@cached.insert(hash)
+				final
+			ensure
+				@cached_mutex.unlock
 			end
-			
-			final
 		end
 		
 		def purge
-			# delete all entries which does not have the current session id
-			dataset = @cached.exclude(session: @session)
-			dataset.each { |entry| ::File.delete(::File.join(@path, entry[:path])) }
-			dataset.delete
+			@cached_mutex.synchronize do
+				# delete all entries which does not have the current session id
+				dataset = @cached.exclude(session: @session)
+				dataset.each { |entry| ::File.delete(::File.join(@path, entry[:path])) }
+				dataset.delete
+			end
 		end
 		
 		def cache(node, target, option_set = nil, &block)
