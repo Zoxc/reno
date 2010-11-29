@@ -37,7 +37,7 @@ module Reno
 		
 		attr :name, true
 		attr :version, true
-		attr_reader :state, :cache
+		attr_reader :state, :cache, :dispatcher
 		
 		def initialize(&block)
 			@block = block

@@ -95,9 +95,13 @@ module Reno
 			end
 			
 			def run(package)
-				result = []
-				@children.each { |child| result.concat child.run(package) }
-				result
+				task = Task.new do |task|
+					task.children.map { |child| child.result }
+				end
+				
+				@children.each { |child| child.run(package, task) }
+				
+				task
 			end
 		end
 		
@@ -118,9 +122,15 @@ module Reno
 				super + @path.size + 1
 			end
 			
-			def run(package)
-				output = @link.process(package, super)
-				[Node::PathResult.follow(output, @path)]
+			def run(package, parent_task)
+				task = Task.new do |task|
+					output = @link.process(package, task.children.map { |child| child.result })
+					Node::PathResult.follow(output, @path)
+				end
+				
+				parent_task.requires task
+				
+				@children.each { |child| child.run(package, task) }
 			end
 		end
 		
@@ -141,9 +151,13 @@ module Reno
 				@path.size
 			end
 			
-			def run(package)
+			def run(package, parent_task)
 				@path_result.nodes.map do |node|
-					Node::PathResult.follow(node, @path)
+					task = Task.new do |task|
+						Node::PathResult.follow(node, @path)
+					end
+					
+					parent_task.requires task
 				end
 			end
 		end
@@ -220,7 +234,11 @@ module Reno
 				
 				tree = trees.min_by { |tree| tree.cost }
 				
-				collection.nodes.concat(tree.run(@package))
+				task = tree.run(@package)
+				
+				result = @package.dispatcher.run(task)
+				
+				collection.nodes.concat(result)
 			end
 			
 			collection

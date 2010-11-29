@@ -12,17 +12,31 @@ module Reno
 		
 		def queued
 			@queued = true
+			@children_left =  @children.size
+		end
+
+		def try_add(dispatcher)
+			dispatcher.add_leaf(self) if @children_left == 0
 		end
 		
-		def requires(tasks)
+		def child_complete(dispatcher)
+			@children_left -= 1
+			try_add(dispatcher)
+		end
+		
+		def requires(*tasks)
 			@children.concat(tasks)
 		end
 		
-		def complete(dispatcher)
+		def result
+			@result
+		end
+		
+		def complete(dispatcher, result)
 			@completed = true
+			@result = result
 			@edges.each do |edge|
-				edge.children.delete self
-				dispatcher.add_leaf(edge) if edge.children == []
+				edge.child_complete dispatcher
 			end
 		end
 		
@@ -38,8 +52,7 @@ module Reno
 				@thread = ::Thread.new do
 					loop do
 						task = @dispatcher.schedule
-						task.work.call
-						@dispatcher.complete(task)
+						@dispatcher.complete(task, task.work.call(task))
 					end
 				end
 			end
@@ -57,9 +70,9 @@ module Reno
 			@task_access = Mutex.new
 		end
 		
-		def complete(task)
+		def complete(task, result)
 			@task_access.synchronize do
-				task.complete self
+				task.complete self, result
 				wake_thread(@waiting_thread) if @waiting_task == task
 			end
 		end
@@ -91,7 +104,7 @@ module Reno
 		
 		def wait(task)
 			@task_access.synchronize do
-				return if task.completed
+				return task.result if task.completed
 				@waiting_thread = ::Thread.current
 				@waiting_task = task
 				@task_access.sleep
@@ -107,7 +120,14 @@ module Reno
 				queue(child)
 			end
 			
-			add_leaf(task) if task.children == []
+			@task_access.synchronize do
+				task.try_add(self)
+			end
+		end
+		
+		def run(task)
+			queue(task)
+			wait(task)
 		end
 	end
 end
