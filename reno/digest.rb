@@ -28,7 +28,7 @@ module Reno
 		def update(data)
 			case data
 				when OptionMap
-					@digest << data.digest.to_hex
+					data.update_digest(self)
 				when Digest
 					@digest << data.to_hex
 				when Node

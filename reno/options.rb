@@ -11,6 +11,10 @@ module Reno
 		def default
 			nil
 		end
+		
+		def update_digest(digest, value)
+			digest.update value.to_s
+		end
 	end
 	
 	class HashOption < Option
@@ -20,6 +24,13 @@ module Reno
 		
 		def default
 			{}
+		end
+		
+		def update_digest(digest, value)
+			value.each_pair do |key, entry|
+				digest.update key.to_s
+				digest.update entry.to_s
+			end
 		end
 	end
 	
@@ -35,6 +46,10 @@ module Reno
 		def default
 			[]
 		end
+		
+		def update_digest(digest, value)
+			value.each { |entry| digest.update entry.to_s }
+		end
 	end
 	
 	class BooleanOption < Option
@@ -44,6 +59,9 @@ module Reno
 	end
 	
 	class FileOption < Option
+		def update_digest(digest, value)
+			digest.update Digest.from_file(value) if (value && ::File.exists(value))
+		end
 	end
 	
 	class OptionMap
@@ -63,8 +81,8 @@ module Reno
 			@map.each_pair(&block)
 		end
 		
-		def digest
-			Digest.new
+		def update_digest(digest)
+			each_pair { |option, value| option.update_digest(digest, value) }
 		end
 	end
 end
