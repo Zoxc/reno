@@ -8,6 +8,7 @@ module Reno
 			LD = ENV['LD'] || 'ld'
 			
 			Prefix = Option.new
+			LinkTimeOptimization = BooleanOption.new
 			
 			class Assembler < Processor
 				link Assembly => ObjectFile
@@ -37,6 +38,7 @@ module Reno
 				
 				Options = [
 					Prefix,
+					LinkTimeOptimization,
 					Architecture,
 					Optimization,
 					MergeConstants,
@@ -89,6 +91,9 @@ module Reno
 									elsif value == Arch::X86_64
 										options << '-m64'
 									end
+								
+								when LinkTimeOptimization
+									options << '-flto' if value
 								
 								when Optimization
 									options.concat(case value
@@ -176,6 +181,7 @@ module Reno
 				
 				Options = [
 					Architecture,
+					LinkTimeOptimization,
 					Prefix,
 					Script,
 					PageSize,
@@ -202,6 +208,9 @@ module Reno
 									elsif value == Arch::X86_64
 										frontend_options << '-m64'
 									end
+								
+								when LinkTimeOptimization
+									options << '-flto' if value
 								
 								when Arch::FreeStanding
 									use_linker = true
